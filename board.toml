@@ -29,9 +29,11 @@ archives = [
   "component:ArmCpu",
   "component:SoftwareAES",
   "component:ShengUfs",
+  "build-ufs-storage-bindings.py --kernelcache ../../../../ipsw/21H461/kernelcache.decompressed --component ShengUfs",
   "component:VirtioMmioBlock",
+  "build-ufs-storage-bindings.py --kernelcache ../../../../ipsw/21H461/kernelcache.decompressed --component VirtioMmioBlock",
   "component:RamBlock",
-  "build-ufs-storage-bindings.py --kernelcache ../../../../ipsw/21H461/kernelcache.decompressed",
+  "build-ufs-storage-bindings.py --kernelcache ../../../../ipsw/21H461/kernelcache.decompressed --component RamBlock",
   "component:GopFramebuffer",
   "component:AppleKeyStoreState"
 ]

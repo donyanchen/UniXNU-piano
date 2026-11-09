@@ -19,13 +19,22 @@ import native_prelink as np
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--kernelcache', type=Path, required=True)
+parser.add_argument('--component', choices=('ShengUfs', 'VirtioMmioBlock', 'RamBlock',
+                                           'NativeUfs', 'NativeVirtioBlock', 'NativeRamBlock'),
+                    default='ShengUfs')
 args = parser.parse_args()
-component = 'ShengUfs'
-# build-arm-driver.py names the object after the component's runtime
-# identifier (legacy_name), so the canonical ShengUfs driver is NativeUfs.o;
-# the archive keeps the canonical name libShengUfs.a.
-runtime_component = 'NativeUfs'
-args.objects_dir = ROOT / 'build/sheng-ufs'
+# build-arm-driver.py names the object after the component's runtime identifier
+# (legacy_name). The archive keeps the legacy name for the Virtio/RAM transports
+# because build-xnu-4k-baseline.sh derives the object path from the archive stem.
+components = {
+    'ShengUfs': ('NativeUfs', 'build/sheng-ufs', 'libShengUfs.a'),
+    'VirtioMmioBlock': ('NativeVirtioBlock', 'build/virtio-mmio-block', 'libNativeVirtioBlock.a'),
+    'RamBlock': ('NativeRamBlock', 'build/ram-block', 'libNativeRamBlock.a'),
+}
+alias = {'NativeUfs': 'ShengUfs', 'NativeVirtioBlock': 'VirtioMmioBlock', 'NativeRamBlock': 'RamBlock'}
+component = alias.get(args.component, args.component)
+runtime_component, directory, archive_name = components[component]
+args.objects_dir = ROOT / directory
 SLIDE = -0x1000000
 
 KERNELCACHE_SHA256 = 'f18b4df865405f2a287b84977d7aca745e056d656d9fc9df1662970ce2969de7'
@@ -207,11 +216,12 @@ assembly = out / 'original-bindings.S'
 assembly.write_text(''.join(f'.globl {name}\n.set {name}, {value:#x}\n' for name, value in sorted(bindings.items())))
 subprocess.run(['xcrun', 'clang', '-target', 'arm64-apple-ios17.0', '-Werror', '-Wno-incompatible-sysroot',
                 '-c', assembly, '-o', out / 'original-bindings.o'], check=True)
-archive = out / ('lib' + component + '.a')
+archive = out / archive_name
 archive.unlink(missing_ok=True)
 subprocess.run(['xcrun', 'ar', 'rcs', archive, object_path, out / 'original-bindings.o'], check=True)
 (out / 'bindings.json').write_text(json.dumps(dict(
     component=component,
+    compiled_object_sha256=hashlib.sha256(object_path.read_bytes()).hexdigest(),
     original_sha256=KERNELCACHE_SHA256, slide=hex(SLIDE),
     vtable=hex(table), original_metaclass=hex(meta), protected_constructor=hex(constructors[0]),
     original_base_destructor=hex(destructor), virtual_methods_checked=len(methods),

@@ -35,6 +35,6 @@ CONFIG_XNU_EARLY_BOOT_PROGRESS=y
 # Use the retained community archive names; official components keep their own defaults.
 CONFIG_XNU_NATIVE_UFS_ARCHIVE="{tree}/build/sheng-ufs/libShengUfs.a"
 CONFIG_XNU_NATIVE_AES_ARCHIVE="{tree}/build/software-aes/libSoftwareAES.a"
-CONFIG_XNU_NATIVE_VIRTIO_BLOCK_ARCHIVE="{tree}/build/virtio-mmio-block/libVirtioMmioBlock.a"
-CONFIG_XNU_NATIVE_RAM_BLOCK_ARCHIVE="{tree}/build/ram-block/libRamBlock.a"
+CONFIG_XNU_NATIVE_VIRTIO_BLOCK_ARCHIVE="{tree}/build/virtio-mmio-block/libNativeVirtioBlock.a"
+CONFIG_XNU_NATIVE_RAM_BLOCK_ARCHIVE="{tree}/build/ram-block/libNativeRamBlock.a"
 # CONFIG_XNU_SOURCE_MOCKFS is not set
