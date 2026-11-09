@@ -80,7 +80,12 @@ while index < len(arguments):
 command += ['-I', str(ROOT / 'build/storage-abi/include'), '-I', str(ROOT / '.cache/xnu-work/osfmk'),
             '-Wall', '-Wextra', '-Werror', '-Wno-unused-parameter', '-Wno-deprecated-declarations',
             '-Wno-c99-designator', '-Wno-reorder-init-list',
-            '-Wno-deprecated-enum-enum-conversion']
+            '-Wno-deprecated-enum-enum-conversion',
+            # Xcode 26's clang enables this for -Wall; Apple's OSSymbol.h (a final
+            # class with virtual methods) trips it in the reference compile.
+            # -Wno-unknown-warning-option keeps older Xcode, which lacks the
+            # warning, from turning the unknown flag into an error under -Werror.
+            '-Wno-unnecessary-virtual-specifier', '-Wno-unknown-warning-option']
 result = subprocess.run(command, cwd=recipe['directory'], capture_output=True, text=True)
 (reference.with_suffix('.log')).write_text(result.stdout + result.stderr)
 require(result.returncode == 0, (result.stdout + result.stderr)[-3500:])
