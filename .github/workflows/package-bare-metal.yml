@@ -78,11 +78,11 @@ jobs:
         working-directory: UniXNU
         run: |
           OUT=out/piano/ipados-17.7.11-21H461/piano
+          IPSW="$PWD/out/ipsw/21H461"
           mkdir -p .cache/firmware/target-volumes
-          cp "$PWD/$OUT/ipsw/21H461/044-76040-038.dmg" "$PWD/$OUT/ipsw/21H461/044-76034-038.dmg" \
-            .cache/firmware/target-volumes/
+          cp "$IPSW/044-76040-038.dmg" "$IPSW/044-76034-038.dmg" .cache/firmware/target-volumes/
           python3 ../device/scripts/prepare-ufs-policies.py --tree "$PWD/$OUT/tree" \
-            --inputs "$PWD/$OUT/ipsw/21H461" --openssl-prefix "$(brew --prefix openssl@3)" \
+            --inputs "$IPSW" --openssl-prefix "$(brew --prefix openssl@3)" \
             > /tmp/s4b.log 2>&1 || { tail -50 /tmp/s4b.log | sed 's/^/::error::/'; exit 1; }
           tail -10 /tmp/s4b.log
       - name: kernel
