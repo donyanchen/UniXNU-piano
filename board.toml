@@ -105,7 +105,7 @@ packages = [
   "{uefi}/Platforms/Xiaomi",
   "{tree}/package",
   "{tree}/kits",
-  "{tree}/drivers/PaganiDarwinBoot",
+  "{tree}/drivers/DarwinBoot",
   "{edk2}",
   "{uefi}/Common/Mu",
   "{uefi}/Common/Mu_OEM_Sample",
