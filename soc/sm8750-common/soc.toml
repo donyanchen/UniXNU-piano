@@ -1,0 +1,10 @@
+"schema_version" = 2
+
+["soc"]
+"name" = "sm8750"
+"description" = "Qualcomm SM8750 (Snapdragon 8 Elite, device-tree codename sun)"
+"source_repository" = "https://github.com/OnePlusOSS/android_kernel_oneplus_sm8750"
+"source_revision" = "6028f47faddaa27700f8dd3a1d83906ea8f27170"
+
+["components"]
+"include" = ["ArmCpu", "ArmDTPlatform"]
