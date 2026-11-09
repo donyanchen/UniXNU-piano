@@ -9,13 +9,13 @@ description = "Xiaomi Pad 8 Pro: first XNU boot from RAM (OnePlus 13T base)"
 kit = "piano"
 
 [ipsw]
-fetch = ["AppleLogo", "KernelCache", "DeviceTree", "StaticTrustCache", "Cryptex1,SystemTrustCache", "OS", "Cryptex1,SystemOS"]
+fetch = ["AppleLogo", "KernelCache", "DeviceTree", "StaticTrustCache", "Cryptex1,SystemTrustCache"]
 
 [ipsw.sha256]
 "applelogo@2732~ipad.im4p" = "de55e7b7a4eff459118f8a4ec9af79b017cfdbfec4c5b079346e414c68ff1fba"
 
 [components]
-include = ["ArmCpu", "ArmDTPlatform", "DarwinBoot", "XnuPrelink", "NativeRamBlock", "NativeVirtioBlock", "NativeAES", "AppleKeyStoreState", "NativeUfs", "GopFramebuffer", "PaganiVerifiedRoot", "Sm8750Platform"]
+include = ["ArmCpu", "ArmDTPlatform", "DarwinBoot", "XnuPrelink", "RamBlock", "VirtioMmioBlock", "SoftwareAES", "AppleKeyStoreState", "ShengUfs", "GopFramebuffer", "VerifiedRoot"]
 
 [kernel]
 config_fragments = ["arch:configs/common.config", "soc:configs/sm8750.config", "os:configs/ipados.config"]
@@ -27,12 +27,13 @@ archives = [
   "build-libpthread-kernel.py",
   "component:ArmDTPlatform",
   "component:ArmCpu",
-  "component:NativeAES",
-  "component:NativeUfs",
-  "build-ufs-storage-bindings.py --kernelcache ../../../../ipsw/21H461/kernelcache.decompressed",
-  "component:NativeVirtioBlock",
-  "component:NativeRamBlock",
-  "build-pagani-verified-root-probe.py --component os --include-systemos",
+  "component:SoftwareAES",
+  "component:ShengUfs",
+  "build-ufs-storage-bindings.py --kernelcache ../../../../ipsw/21H461/kernelcache.decompressed --component ShengUfs",
+  "component:VirtioMmioBlock",
+  "build-ufs-storage-bindings.py --kernelcache ../../../../ipsw/21H461/kernelcache.decompressed --component VirtioMmioBlock",
+  "component:RamBlock",
+  "build-ufs-storage-bindings.py --kernelcache ../../../../ipsw/21H461/kernelcache.decompressed --component RamBlock",
   "component:GopFramebuffer",
   "component:AppleKeyStoreState"
 ]
