@@ -25,13 +25,14 @@ archives = [
   "build-corecrypto-14.py",
   "build-corecrypto-14.py --namespace",
   "build-libpthread-kernel.py",
+  "component:ArmDTPlatform",
   "component:ArmCpu",
   "component:SoftwareAES",
   "component:ShengUfs",
-  "build-ufs-storage-bindings.py --kernelcache ../../../../ipsw/21H461/kernelcache.decompressed",
   "component:VirtioMmioBlock",
   "component:RamBlock",
-  "component:GopFramebuffer"
+  "component:GopFramebuffer",
+  "component:AppleKeyStoreState"
 ]
 
 [kernel.prelink]
