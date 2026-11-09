@@ -1,0 +1,21 @@
+--- a/osfmk/kern/machine.c
++++ b/osfmk/kern/machine.c
+@@ -1612,3 +1612,18 @@
+ 	return KERN_SUCCESS;
+ }
+ #endif /* CONFIG_XNUPOST */
++
++/*
++ * BootProgress (the out-of-tree component the official piano port links) writes
++ * the ramoops "U" lines. This repository does not build that component, but the
++ * phone-* patches test `if (boot_progress_trace)` before every call, so the
++ * kernel needs a definition to link. The weak definition makes every call a
++ * no-op here and lets a strong BootProgress definition win if it is added later.
++ */
++void boot_progress_trace(const char *text);
++
++__attribute__((weak)) void
++boot_progress_trace(const char *text)
++{
++	(void)text;
++}

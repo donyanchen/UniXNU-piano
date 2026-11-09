@@ -7,6 +7,7 @@ zzzzzzz-early-framebuffer-page-tables.patch
 ticket-lock-diagnostics.patch
 gpu-user-mappings.patch
 phone-wallpaper-collections.patch
+boot-progress-trace-stub.patch
 phone-keyboard-layouts.patch
 crash-trace.patch
 phone-staged-apps-migration.patch
