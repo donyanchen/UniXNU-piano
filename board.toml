@@ -19,7 +19,7 @@ include = ["ArmCpu", "ArmDTPlatform", "DarwinBoot", "XnuPrelink", "RamBlock", "V
 
 [kernel]
 config_fragments = ["arch:configs/common.config", "soc:configs/sm8750.config", "os:configs/ipados.config"]
-patch_series = ["arch:patches/xnu/series", "soc:patches/xnu/series", "device:patches/xnu/piano-series", "device:patches/xnu/series"]
+patch_series = ["arch:patches/xnu/series", "soc:patches/xnu/series", "os:patches/xnu/series", "device:patches/xnu/series"]
 defconfig = "piano_defconfig"
 archives = [
   "build-corecrypto-14.py",
@@ -86,8 +86,8 @@ windows = [
 ]
 
 [firmware]
-# Our UEFI (android_device_xiaomi_piano-uefi, branch unixnu, after its
-# tools/setup-deps.sh): --uefi points at its deps/Mu-Silicium.
+# The board UEFI (Mu-Silicium based, after its tools/setup-deps.sh):
+# --uefi points at its deps/Mu-Silicium.
 config = "piano"
 dsc = "Platforms/Xiaomi/pianoPkg/piano.dsc"
 fd = "Build/pianoPkg/{target}_CLANGPDB/FV/SILICIUM_UEFI.fd"
@@ -134,3 +134,10 @@ button-names = ["hold", "voldown", "volup"]
 
 [adt.buttons.u32]
 home-button-type = 2
+
+[package]
+# The UniXNU checkout, relative to this repository (scripts/package.sh reads it).
+unixnu = "../UniXNU"
+
+[package.defconfig]
+"ipados-17.7.11-21H461" = "piano_defconfig"

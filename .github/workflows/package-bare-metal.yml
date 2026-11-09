@@ -25,13 +25,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: UniXNU/UniXNU
-          ref: main
+          # Pinned 2026-11-09: main as of the boot_progress_trace fix.
+          ref: 95ad78129203442c3c14c02336303adbddf8d0a3
           path: UniXNU
           fetch-depth: 1
       - uses: actions/checkout@v4
         with:
           repository: xiaomi-pad-8-pro-development/android_device_xiaomi_piano-uefi
-          ref: unixnu
+          # Pinned 2026-11-09: unixnu branch head. Replace when the UEFI source changes.
+          ref: 31545f9392d5f5c2acae14cec2fa3a0aa1de51d4
           path: uefi
           submodules: recursive
       - name: tools
@@ -45,14 +47,6 @@ jobs:
           mkdir -p device/package device/scripts
           wc -c device/package/PaganiPeripherals.h
           find device/modules -name 'build-*.py' -exec cp -v {} device/scripts/ \; 2>/dev/null || true
-          python3 -c "
-          import io
-          p='device/board.toml'
-          s=open(p).read()
-          if '[package]' not in s:
-              open(p,'w').write(s+'\n[package]\nunixnu = \"../UniXNU\"\n')
-          print(open(p).read()[-90:])
-          "
           ls -l device/package/ device/scripts/ | head
       - name: defconfig
         working-directory: UniXNU
