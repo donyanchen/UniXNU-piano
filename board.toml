@@ -31,6 +31,9 @@ archives = [
   "component:ShengUfs",
   "component:VirtioMmioBlock",
   "component:RamBlock",
+  "build-ufs-storage-bindings.py --kernelcache ../../../../ipsw/21H461/kernelcache.decompressed",
+  "build-virtio-mmio-bindings.py --component VirtioMmioBlock",
+  "build-virtio-mmio-bindings.py --component RamBlock",
   "component:GopFramebuffer",
   "component:AppleKeyStoreState"
 ]
