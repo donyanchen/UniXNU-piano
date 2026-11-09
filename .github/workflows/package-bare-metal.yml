@@ -79,12 +79,6 @@ jobs:
         working-directory: UniXNU
         run: |
           OUT=out/piano/ipados-17.7.11-21H461/piano
-          KIT="$PWD/$OUT/tree/kits/PaganiVerifiedRoot"
-          for d in tests tools; do
-            if [ ! -e "$KIT/$d" ]; then
-              cp -R "../device/modules/Pagani/kits/PaganiVerifiedRoot/$d" "$KIT/$d"
-            fi
-          done
           python3 ../device/scripts/prepare-ufs-policies.py --tree "$PWD/$OUT/tree" \
             --inputs "$PWD/$OUT/ipsw/21H461" --openssl-prefix "$(brew --prefix openssl@3)" \
             > /tmp/s4b.log 2>&1 || { tail -50 /tmp/s4b.log | sed 's/^/::error::/'; exit 1; }
