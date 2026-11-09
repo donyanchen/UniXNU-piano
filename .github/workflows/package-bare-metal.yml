@@ -38,7 +38,7 @@ jobs:
           submodules: recursive
       - name: tools
         run: |
-          brew install dtc llvm lld cmake mtools blacktop/tap/ipsw
+          brew install dtc llvm lld cmake mtools openssl@3 blacktop/tap/ipsw
           echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
           echo "/opt/homebrew/opt/lld/bin" >> $GITHUB_PATH
       - name: prep
@@ -74,6 +74,17 @@ jobs:
         run: |
           ./unixnu tree -D ../device > /tmp/s4.log 2>&1 || { tail -40 /tmp/s4.log | sed 's/^/::error::/'; exit 1; }
           find out -maxdepth 4 -type d -name tree
+      - name: policies
+        working-directory: UniXNU
+        run: |
+          OUT=out/piano/ipados-17.7.11-21H461/piano
+          mkdir -p .cache/firmware/target-volumes
+          cp "$PWD/$OUT/ipsw/21H461/044-76040-038.dmg" "$PWD/$OUT/ipsw/21H461/044-76034-038.dmg" \
+            .cache/firmware/target-volumes/
+          python3 ../device/scripts/prepare-ufs-policies.py --tree "$PWD/$OUT/tree" \
+            --inputs "$PWD/$OUT/ipsw/21H461" --openssl-prefix "$(brew --prefix openssl@3)" \
+            > /tmp/s4b.log 2>&1 || { tail -50 /tmp/s4b.log | sed 's/^/::error::/'; exit 1; }
+          tail -10 /tmp/s4b.log
       - name: kernel
         working-directory: UniXNU
         run: |

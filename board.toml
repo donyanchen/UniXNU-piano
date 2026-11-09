@@ -9,7 +9,7 @@ description = "Xiaomi Pad 8 Pro: first XNU boot from RAM (OnePlus 13T base)"
 kit = "piano"
 
 [ipsw]
-fetch = ["AppleLogo", "KernelCache", "DeviceTree", "StaticTrustCache", "Cryptex1,SystemTrustCache"]
+fetch = ["AppleLogo", "KernelCache", "DeviceTree", "StaticTrustCache", "Cryptex1,SystemTrustCache", "OS", "Cryptex1,SystemOS"]
 
 [ipsw.sha256]
 "applelogo@2732~ipad.im4p" = "de55e7b7a4eff459118f8a4ec9af79b017cfdbfec4c5b079346e414c68ff1fba"
@@ -34,6 +34,7 @@ archives = [
   "build-ufs-storage-bindings.py --kernelcache ../../../../ipsw/21H461/kernelcache.decompressed --component VirtioMmioBlock",
   "component:RamBlock",
   "build-ufs-storage-bindings.py --kernelcache ../../../../ipsw/21H461/kernelcache.decompressed --component RamBlock",
+  "build-verified-root-probe.py --component os --include-systemos",
   "component:GopFramebuffer",
   "component:AppleKeyStoreState"
 ]

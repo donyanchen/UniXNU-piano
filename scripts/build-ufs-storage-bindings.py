@@ -213,7 +213,16 @@ missing = [name for name in undefined if name not in possible]
 require(not missing, 'Unqualified original storage import: ' + ', '.join(missing))
 bindings = {name: possible[name] + SLIDE for name in undefined}
 assembly = out / 'original-bindings.S'
-assembly.write_text(''.join(f'.globl {name}\n.set {name}, {value:#x}\n' for name, value in sorted(bindings.items())))
+text = ''.join(f'.globl {name}\n.set {name}, {value:#x}\n' for name, value in sorted(bindings.items()))
+if component == 'ShengUfs':
+    # The canonical ShengUfs driver declares the board's persistent-store
+    # callbacks but does not define them. Keep the root read-only for the
+    # first boot; a board that enables Data writes replaces these weak stubs.
+    text += ('.globl _native_ufs_store_write\n.weak_definition _native_ufs_store_write\n'
+             '_native_ufs_store_write:\n\tmov\tx0, #0\n\tret\n'
+             '.globl _native_ufs_store_write_cached\n.weak_definition _native_ufs_store_write_cached\n'
+             '_native_ufs_store_write_cached:\n\tmov\tx0, #0\n\tret\n')
+assembly.write_text(text)
 subprocess.run(['xcrun', 'clang', '-target', 'arm64-apple-ios17.0', '-Werror', '-Wno-incompatible-sysroot',
                 '-c', assembly, '-o', out / 'original-bindings.o'], check=True)
 archive = out / archive_name
