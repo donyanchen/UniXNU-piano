@@ -65,7 +65,7 @@ evidence = []
 [[area]]
 id = "storage"
 status = "planned"
-components = []
+components = ["ShengUfs", "RamBlock", "VirtioMmioBlock"]
 paths = ["drivers/ShengUfs", "scripts/*ufs*", "scripts/*storage*", "scripts/*userdata*", "scripts/*root*"]
 inputs = ["Identify the storage and root hardware, resources and existing component interfaces for this board."]
 configuration = ["Record the board.toml fields, DTS properties and defconfig values used for storage and root."]
@@ -79,7 +79,7 @@ evidence = []
 [[area]]
 id = "display"
 status = "planned"
-components = []
+components = ["GopFramebuffer"]
 paths = ["package/*Display*", "package/*Framebuffer*", "package/*Backlight*", "package/AppleARMBacklight.cpp", "package/GeniI2c*", "scripts/*display*", "scripts/*gop*", "scripts/*framebuffer*"]
 inputs = ["Identify the display hardware, resources and existing component interfaces for this board."]
 configuration = ["Record the board.toml fields, DTS properties and defconfig values used for display."]
@@ -177,7 +177,7 @@ evidence = []
 [[area]]
 id = "diagnostics"
 status = "planned"
-components = []
+components = ["VerifiedRoot", "AppleKeyStoreState"]
 paths = ["scripts/check-*", "scripts/probe-*", "scripts/audit-*", "scripts/read-*", "scripts/prepare-*", "scripts/data/**", "package/tests/**", "package/*Tests*", "package/*Diagnostic*", "package/*Probe*", "package/Boot*", "package/linux-log/**", "unixnu.lock"]
 inputs = ["Identify the diagnostics hardware, resources and existing component interfaces for this board."]
 configuration = ["Record the board.toml fields, DTS properties and defconfig values used for diagnostics."]
