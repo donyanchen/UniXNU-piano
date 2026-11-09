@@ -31,7 +31,6 @@ archives = [
   "component:ShengUfs",
   "component:VirtioMmioBlock",
   "component:RamBlock",
-  "build-pagani-verified-root-probe.py --component os --include-systemos",
   "component:GopFramebuffer",
   "component:AppleKeyStoreState"
 ]
