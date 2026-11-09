@@ -15,7 +15,7 @@ fetch = ["AppleLogo", "KernelCache", "DeviceTree", "StaticTrustCache", "Cryptex1
 "applelogo@2732~ipad.im4p" = "de55e7b7a4eff459118f8a4ec9af79b017cfdbfec4c5b079346e414c68ff1fba"
 
 [components]
-include = ["BootProgress", "NativeAES", "NativeKeyStoreEvents", "NativeMobileDisplay", "NativeRamBlock", "NativeUfs", "NativeVirtioBlock", "PaganiArmCpu", "PaganiArmDTPlatform", "PaganiDarwinBoot", "ShengPlatformPower", "Stage7Probe", "NativePrelink", "PaganiVerifiedRoot", "Sm8750Platform"]
+include = ["ArmCpu", "ArmDTPlatform", "DarwinBoot", "XnuPrelink", "RamBlock", "VirtioMmioBlock", "SoftwareAES", "AppleKeyStoreState", "ShengUfs", "GopFramebuffer", "VerifiedRoot"]
 
 [kernel]
 config_fragments = ["arch:configs/common.config", "soc:configs/sm8750.config", "os:configs/ipados.config"]
@@ -25,19 +25,17 @@ archives = [
   "build-corecrypto-14.py",
   "build-corecrypto-14.py --namespace",
   "build-libpthread-kernel.py",
-  "component:PaganiArmCpu",
-  "component:NativeAES",
-  "component:NativeUfs",
+  "component:ArmCpu",
+  "component:SoftwareAES",
+  "component:ShengUfs",
   "build-ufs-storage-bindings.py --kernelcache ../../../../ipsw/21H461/kernelcache.decompressed",
-  "component:NativeVirtioBlock",
-  "component:NativeRamBlock",
-  "component:ShengPlatformPower",
-  "build-pagani-verified-root-probe.py --component os --include-systemos",
-  "component:NativeMobileDisplay"
+  "component:VirtioMmioBlock",
+  "component:RamBlock",
+  "component:GopFramebuffer"
 ]
 
 [kernel.prelink]
-tool = "kits/NativePrelink/emit_prelink.py"
+tool = "kits/XnuPrelink/emit_prelink.py"
 kernel = "build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837.unstripped.noctf"
 kernelcache_sha256 = "f18b4df865405f2a287b84977d7aca745e056d656d9fc9df1662970ce2969de7"
 slide = "-0x1000000"
