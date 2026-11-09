@@ -229,7 +229,10 @@ subprocess.run(['xcrun', 'clang', '-target', 'arm64-apple-ios17.0', '-Werror', '
                 '-c', assembly, '-o', out / 'original-bindings.o'], check=True)
 archive = out / archive_name
 archive.unlink(missing_ok=True)
-subprocess.run(['xcrun', 'ar', 'rcs', archive, object_path, out / 'original-bindings.o'], check=True)
+archive_objects = [object_path]
+if component == 'ShengUfs':
+    archive_objects.append(out / 'original-bindings.o')
+subprocess.run(['xcrun', 'ar', 'rcs', archive, *archive_objects], check=True)
 # build-xnu-4k-baseline.sh derives the checked object path from the archive stem;
 # give it the canonical RamBlock.o alias when the driver object is NativeRamBlock.o.
 check_object = out / (Path(archive_name).stem.removeprefix('lib') + '.o')
