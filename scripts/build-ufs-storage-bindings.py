@@ -29,7 +29,7 @@ args = parser.parse_args()
 components = {
     'ShengUfs': ('NativeUfs', 'build/sheng-ufs', 'libShengUfs.a'),
     'VirtioMmioBlock': ('NativeVirtioBlock', 'build/virtio-mmio-block', 'libNativeVirtioBlock.a'),
-    'RamBlock': ('NativeRamBlock', 'build/ram-block', 'libNativeRamBlock.a'),
+    'RamBlock': ('NativeRamBlock', 'build/ram-block', 'libRamBlock.a'),
 }
 alias = {'NativeUfs': 'ShengUfs', 'NativeVirtioBlock': 'VirtioMmioBlock', 'NativeRamBlock': 'RamBlock'}
 component = alias.get(args.component, args.component)
@@ -219,6 +219,11 @@ subprocess.run(['xcrun', 'clang', '-target', 'arm64-apple-ios17.0', '-Werror', '
 archive = out / archive_name
 archive.unlink(missing_ok=True)
 subprocess.run(['xcrun', 'ar', 'rcs', archive, object_path, out / 'original-bindings.o'], check=True)
+# build-xnu-4k-baseline.sh derives the checked object path from the archive stem;
+# give it the canonical RamBlock.o alias when the driver object is NativeRamBlock.o.
+check_object = out / (Path(archive_name).stem.removeprefix('lib') + '.o')
+if check_object != object_path:
+    check_object.write_bytes(object_path.read_bytes())
 (out / 'bindings.json').write_text(json.dumps(dict(
     component=component,
     compiled_object_sha256=hashlib.sha256(object_path.read_bytes()).hexdigest(),
