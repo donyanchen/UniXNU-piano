@@ -21,6 +21,10 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--kernelcache', type=Path, required=True)
 args = parser.parse_args()
 component = 'ShengUfs'
+# build-arm-driver.py names the object after the component's runtime
+# identifier (legacy_name), so the canonical ShengUfs driver is NativeUfs.o;
+# the archive keeps the canonical name libShengUfs.a.
+runtime_component = 'NativeUfs'
 args.objects_dir = ROOT / 'build/sheng-ufs'
 SLIDE = -0x1000000
 
@@ -191,11 +195,11 @@ possible.update({'__ZN20IOBlockStorageDeviceC2EPK11OSMetaClass': constructors[0]
                  '__ZN20IOBlockStorageDevice10gMetaClassE': meta,
                  '__ZTV20IOBlockStorageDevice': table})
 
-object_path = out / (component + '.o')
-require(object_path.is_file(), f'Build {component}.o before this binder')
+object_path = out / (runtime_component + '.o')
+require(object_path.is_file(), f'Build {runtime_component}.o before this binder')
 undefined = subprocess.check_output(['xcrun', 'nm', '-u', '-j', object_path], text=True).split()
 undefined = [name for name in undefined if 'IOBlockStorageDevice' in name]
-require(undefined, f'No original block-storage imports found in {component}.o')
+require(undefined, f'No original block-storage imports found in {runtime_component}.o')
 missing = [name for name in undefined if name not in possible]
 require(not missing, 'Unqualified original storage import: ' + ', '.join(missing))
 bindings = {name: possible[name] + SLIDE for name in undefined}
