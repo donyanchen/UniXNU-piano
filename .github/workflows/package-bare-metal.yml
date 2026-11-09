@@ -1,0 +1,120 @@
+name: package
+on:
+  workflow_dispatch:
+    inputs:
+      os:
+        type: choice
+        options: ["17", "26", "27"]
+        default: "17"
+      jobs:
+        default: "4"
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: macos-26
+    timeout-minutes: 300
+    env:
+      UNIXNU_UNIQUE_CHIP_ID: "0x0123456789abcdef"
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: device
+          submodules: recursive
+      - uses: actions/checkout@v4
+        with:
+          repository: UniXNU/UniXNU
+          ref: main
+          path: UniXNU
+          fetch-depth: 1
+      - uses: actions/checkout@v4
+        with:
+          repository: xiaomi-pad-8-pro-development/android_device_xiaomi_piano-uefi
+          ref: unixnu
+          path: uefi
+          submodules: recursive
+      - name: tools
+        run: |
+          brew install dtc llvm lld cmake mtools blacktop/tap/ipsw
+          echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
+          echo "/opt/homebrew/opt/lld/bin" >> $GITHUB_PATH
+      - name: prep
+        run: |
+          (cd uefi && chmod +x tools/setup-deps.sh && ./tools/setup-deps.sh) || echo "setup-deps skipped"
+          mkdir -p device/package device/scripts
+          wc -c device/package/PaganiPeripherals.h
+          find device/modules -name 'build-*.py' -exec cp -v {} device/scripts/ \; 2>/dev/null || true
+          python3 -c "
+          import io
+          p='device/board.toml'
+          s=open(p).read()
+          if '[package]' not in s:
+              open(p,'w').write(s+'\n[package]\nunixnu = \"../UniXNU\"\n')
+          print(open(p).read()[-90:])
+          "
+          ls -l device/package/ device/scripts/ | head
+      - name: defconfig
+        working-directory: UniXNU
+        run: |
+          cat > unixnu.local.toml <<EOF
+          [build]
+          device = "../device"
+          jobs = ${{ inputs.jobs }}
+          target = "DEBUG"
+          EOF
+          ./unixnu defconfig piano_defconfig -D ../device > /tmp/s1.log 2>&1 || { tail -30 /tmp/s1.log | sed 's/^/::error::/'; exit 1; }
+          tail -20 /tmp/s1.log
+      - name: fetch
+        working-directory: UniXNU
+        run: |
+          ./unixnu fetch > /tmp/s2.log 2>&1 || { tail -40 /tmp/s2.log | sed 's/^/::error::/'; exit 1; }
+          tail -25 /tmp/s2.log
+      - name: ipsw
+        working-directory: UniXNU
+        run: |
+          ./unixnu ipsw fetch -D ../device > /tmp/s3.log 2>&1 || { tail -40 /tmp/s3.log | sed 's/^/::error::/'; exit 1; }
+          tail -20 /tmp/s3.log
+      - name: tree
+        working-directory: UniXNU
+        run: |
+          ./unixnu tree -D ../device > /tmp/s4.log 2>&1 || { tail -40 /tmp/s4.log | sed 's/^/::error::/'; exit 1; }
+          find out -maxdepth 4 -type d -name tree
+      - name: kernel
+        working-directory: UniXNU
+        run: |
+          ./unixnu build kernel -D ../device -j ${{ inputs.jobs }} > /tmp/s5.log 2>&1 || { tail -50 /tmp/s5.log | sed 's/^/::error::/'; exit 1; }
+          tail -20 /tmp/s5.log
+      - name: package
+        working-directory: UniXNU
+        run: |
+          ./unixnu build package -D ../device > /tmp/s6.log 2>&1 || { tail -50 /tmp/s6.log | sed 's/^/::error::/'; exit 1; }
+          tail -15 /tmp/s6.log
+      - name: firmware
+        working-directory: UniXNU
+        run: |
+          ./unixnu build firmware -D ../device --uefi ../uefi/deps/Mu-Silicium > /tmp/s7.log 2>&1 || { tail -50 /tmp/s7.log | sed 's/^/::error::/'; exit 1; }
+          tail -15 /tmp/s7.log
+      - name: payload
+        working-directory: UniXNU
+        run: |
+          ./unixnu build payload -D ../device > /tmp/s8.log 2>&1 || { tail -50 /tmp/s8.log | sed 's/^/::error::/'; exit 1; }
+          tail -15 /tmp/s8.log
+      - name: bootimg
+        working-directory: UniXNU
+        run: |
+          ./unixnu bootimg -D ../device > /tmp/s9.log 2>&1 || { tail -50 /tmp/s9.log | sed 's/^/::error::/'; exit 1; }
+          tail -15 /tmp/s9.log
+      - name: collect
+        if: always()
+        run: |
+          mkdir -p out
+          find UniXNU/out/piano -type f \( -name '*.img' -o -name 'kernel.macho*' -o -name '*.efi' \) -exec cp -v {} out/ \; || true
+          tar czf out/logs.tar.gz UniXNU/out/piano/*/*/logs 2>/dev/null || true
+          cat /tmp/s*.log > out/build.log 2>/dev/null || true
+          ls -l out
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: piano-ipados-${{ inputs.os }}
+          path: out/

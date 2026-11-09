@@ -1,0 +1,34 @@
+/dts-v1/;
+/include/ "sm8750.dtsi"
+
+/ {
+    model = "Xiaomi Pad 8 Pro";
+    compatible = "xiaomi,piano", "qcom,sm8750";
+
+    // Contiguous high RAM from the piano live DTB (/sys/firmware/fdt):
+    // 0x980000000, 6 GiB. DarwinBoot allocates its own 4 GiB window.
+    memory@980000000 {
+        device_type = "memory";
+        reg = <9 0x80000000 1 0x80000000>;
+    };
+
+    // From the piano live DTB: aop_cmd_db_region and smem_region.
+    reserved-memory {
+        #address-cells = <2>;
+        #size-cells = <2>;
+        ranges;
+        aop_cmd_db_mem: cmd-db@81c60000 {
+            compatible = "qcom,cmd-db";
+            reg = <0 0x81c60000 0 0x20000>;
+            no-map;
+        };
+        smem_mem: smem@81d00000 {
+            compatible = "qcom,smem";
+            reg = <0 0x81d00000 0 0x200000>;
+            no-map;
+        };
+    };
+};
+
+// One CPU for the first boot.
+&cpu0 { status = "okay"; };

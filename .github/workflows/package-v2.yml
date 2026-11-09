@@ -1,0 +1,37 @@
+name: p2
+on:
+  workflow_dispatch:
+    inputs:
+      os: {type: choice, options: ["17", "26", "27"], default: "17"}
+      jobs: {default: "4"}
+permissions: {contents: read}
+jobs:
+  package:
+    runs-on: macos-26
+    timeout-minutes: 300
+    env:
+      UNIXNU_UNIQUE_CHIP_ID: "0x0123456789abcdef"
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: device, submodules: recursive}
+      - uses: actions/checkout@v4
+        with: {repository: IssacL04/UniXNU_Enc3l, path: UniXNU, fetch-depth: 1}
+      - uses: actions/checkout@v4
+        with: {repository: xiaomi-pad-8-pro-development/android_device_xiaomi_piano-uefi, ref: unixnu, path: uefi, submodules: recursive}
+      - name: tools
+        run: |
+          brew install dtc llvm lld cmake mtools blacktop/tap/ipsw
+          echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
+          echo "/opt/homebrew/opt/lld/bin" >> $GITHUB_PATH
+      - name: prep
+        run: bash device/prep.sh
+      - name: build
+        working-directory: UniXNU
+        rtn: bash ../device/build.sh "${{ inputs.jobs }}"
+      - name: upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: piano-ipados-${{ inputs.os }}
+          path: out/

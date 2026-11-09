@@ -1,0 +1,2 @@
+# Required firmware inputs: relative path | source | SHA-256 | consumer
+# The first boot needs none: the piano UEFI carries its own Qualcomm drivers.
