@@ -19,22 +19,9 @@ import native_prelink as np
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--kernelcache', type=Path, required=True)
-parser.add_argument('--component', choices=('ShengUfs', 'VirtioMmioBlock', 'RamBlock',
-                                           'NativeUfs', 'NativeVirtioBlock', 'NativeRamBlock'),
-                    default='ShengUfs')
 args = parser.parse_args()
-# build-arm-driver.py names the object after the component's runtime identifier
-# (legacy_name). The archive keeps the legacy name for the Virtio/RAM transports
-# because build-xnu-4k-baseline.sh derives the object path from the archive stem.
-components = {
-    'ShengUfs': ('NativeUfs', 'build/sheng-ufs', 'libShengUfs.a'),
-    'VirtioMmioBlock': ('NativeVirtioBlock', 'build/virtio-mmio-block', 'libNativeVirtioBlock.a'),
-    'RamBlock': ('NativeRamBlock', 'build/ram-block', 'libRamBlock.a'),
-}
-alias = {'NativeUfs': 'ShengUfs', 'NativeVirtioBlock': 'VirtioMmioBlock', 'NativeRamBlock': 'RamBlock'}
-component = alias.get(args.component, args.component)
-runtime_component, directory, archive_name = components[component]
-args.objects_dir = ROOT / directory
+component = 'NativeUfs'
+args.objects_dir = ROOT / 'build/native-ufs'
 SLIDE = -0x1000000
 
 KERNELCACHE_SHA256 = 'f18b4df865405f2a287b84977d7aca745e056d656d9fc9df1662970ce2969de7'
@@ -92,13 +79,8 @@ while index < len(arguments):
     index += 1
 command += ['-I', str(ROOT / 'build/storage-abi/include'), '-I', str(ROOT / '.cache/xnu-work/osfmk'),
             '-Wall', '-Wextra', '-Werror', '-Wno-unused-parameter', '-Wno-deprecated-declarations',
-            '-Wno-c99-designator', '-Wno-reorder-init-list',
-            '-Wno-deprecated-enum-enum-conversion',
-            # Xcode 26's clang enables this for -Wall; Apple's OSSymbol.h (a final
-            # class with virtual methods) trips it in the reference compile.
-            # -Wno-unknown-warning-option keeps older Xcode, which lacks the
-            # warning, from turning the unknown flag into an error under -Werror.
-            '-Wno-unnecessary-virtual-specifier', '-Wno-unknown-warning-option']
+            '-Wno-c99-designator', '-Wno-reorder-init-list', '-Wno-unnecessary-virtual-specifier',
+            '-Wno-deprecated-enum-enum-conversion']
 result = subprocess.run(command, cwd=recipe['directory'], capture_output=True, text=True)
 (reference.with_suffix('.log')).write_text(result.stdout + result.stderr)
 require(result.returncode == 0, (result.stdout + result.stderr)[-3500:])
@@ -204,11 +186,11 @@ possible.update({'__ZN20IOBlockStorageDeviceC2EPK11OSMetaClass': constructors[0]
                  '__ZN20IOBlockStorageDevice10gMetaClassE': meta,
                  '__ZTV20IOBlockStorageDevice': table})
 
-object_path = out / (runtime_component + '.o')
-require(object_path.is_file(), f'Build {runtime_component}.o before this binder')
+object_path = out / (component + '.o')
+require(object_path.is_file(), f'Build {component}.o before this binder')
 undefined = subprocess.check_output(['xcrun', 'nm', '-u', '-j', object_path], text=True).split()
 undefined = [name for name in undefined if 'IOBlockStorageDevice' in name]
-require(undefined, f'No original block-storage imports found in {runtime_component}.o')
+require(undefined, f'No original block-storage imports found in {component}.o')
 missing = [name for name in undefined if name not in possible]
 require(not missing, 'Unqualified original storage import: ' + ', '.join(missing))
 bindings = {name: possible[name] + SLIDE for name in undefined}
@@ -216,17 +198,11 @@ assembly = out / 'original-bindings.S'
 assembly.write_text(''.join(f'.globl {name}\n.set {name}, {value:#x}\n' for name, value in sorted(bindings.items())))
 subprocess.run(['xcrun', 'clang', '-target', 'arm64-apple-ios17.0', '-Werror', '-Wno-incompatible-sysroot',
                 '-c', assembly, '-o', out / 'original-bindings.o'], check=True)
-archive = out / archive_name
+archive = out / ('lib' + component + '.a')
 archive.unlink(missing_ok=True)
 subprocess.run(['xcrun', 'ar', 'rcs', archive, object_path, out / 'original-bindings.o'], check=True)
-# build-xnu-4k-baseline.sh derives the checked object path from the archive stem;
-# give it the canonical RamBlock.o alias when the driver object is NativeRamBlock.o.
-check_object = out / (Path(archive_name).stem.removeprefix('lib') + '.o')
-if check_object != object_path:
-    check_object.write_bytes(object_path.read_bytes())
 (out / 'bindings.json').write_text(json.dumps(dict(
     component=component,
-    compiled_object_sha256=hashlib.sha256(object_path.read_bytes()).hexdigest(),
     original_sha256=KERNELCACHE_SHA256, slide=hex(SLIDE),
     vtable=hex(table), original_metaclass=hex(meta), protected_constructor=hex(constructors[0]),
     original_base_destructor=hex(destructor), virtual_methods_checked=len(methods),

@@ -24,9 +24,10 @@ jobs:
           submodules: recursive
       - uses: actions/checkout@v4
         with:
-          repository: UniXNU/UniXNU
-          # Pinned 2026-11-09: main as of the boot_progress_trace fix.
-          ref: 95ad78129203442c3c14c02336303adbddf8d0a3
+          repository: IssacL04/UniXNU_Enc3l
+          # Pinned 2026-11-10: maintained Pagani fork with NativeUfs,
+          # PaganiVerifiedRoot and build-pagani-verified-root-probe.py.
+          ref: a6ff7768bba6b9f285ac4c3e5b2c5d4904a016a3
           path: UniXNU
           fetch-depth: 1
       - uses: actions/checkout@v4
@@ -38,7 +39,7 @@ jobs:
           submodules: recursive
       - name: tools
         run: |
-          brew install dtc llvm lld cmake mtools blacktop/tap/ipsw
+          brew install dtc llvm lld cmake mtools openssl@3 blacktop/tap/ipsw
           echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
           echo "/opt/homebrew/opt/lld/bin" >> $GITHUB_PATH
       - name: prep
@@ -74,6 +75,14 @@ jobs:
         run: |
           ./unixnu tree -D ../device > /tmp/s4.log 2>&1 || { tail -40 /tmp/s4.log | sed 's/^/::error::/'; exit 1; }
           find out -maxdepth 4 -type d -name tree
+      - name: policies
+        working-directory: UniXNU
+        run: |
+          OUT=out/piano/ipados-17.7.11-21H461/piano
+          python3 ../device/scripts/prepare-ufs-policies.py --tree "$PWD/$OUT/tree" \
+            --inputs "$PWD/$OUT/ipsw/21H461" --openssl-prefix "$(brew --prefix openssl@3)" \
+            > /tmp/s4b.log 2>&1 || { tail -50 /tmp/s4b.log | sed 's/^/::error::/'; exit 1; }
+          tail -10 /tmp/s4b.log
       - name: kernel
         working-directory: UniXNU
         run: |
