@@ -28,6 +28,7 @@ archives = [
   "component:ArmDTPlatform",
   "component:ArmCpu",
   "component:SoftwareAES",
+  "build-software-aes-bindings.py",
   "component:ShengUfs",
   "build-ufs-storage-bindings.py --kernelcache ../../../../ipsw/21H461/kernelcache.decompressed --component ShengUfs",
   "component:VirtioMmioBlock",

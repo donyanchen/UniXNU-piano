@@ -221,7 +221,9 @@ if component == 'ShengUfs':
     text += ('.globl _native_ufs_store_write\n.weak_definition _native_ufs_store_write\n'
              '_native_ufs_store_write:\n\tmov\tx0, #0\n\tret\n'
              '.globl _native_ufs_store_write_cached\n.weak_definition _native_ufs_store_write_cached\n'
-             '_native_ufs_store_write_cached:\n\tmov\tx0, #0\n\tret\n')
+             '_native_ufs_store_write_cached:\n\tmov\tx0, #0\n\tret\n'
+             '.globl _boot_progress_poll\n.weak_definition _boot_progress_poll\n'
+             '_boot_progress_poll:\n\tmov\tx0, #0\n\tret\n')
 assembly.write_text(text)
 subprocess.run(['xcrun', 'clang', '-target', 'arm64-apple-ios17.0', '-Werror', '-Wno-incompatible-sysroot',
                 '-c', assembly, '-o', out / 'original-bindings.o'], check=True)
