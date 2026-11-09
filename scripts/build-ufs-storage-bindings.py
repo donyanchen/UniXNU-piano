@@ -215,10 +215,13 @@ bindings = {name: possible[name] + SLIDE for name in undefined}
 assembly = out / 'original-bindings.S'
 text = ''.join(f'.globl {name}\n.set {name}, {value:#x}\n' for name, value in sorted(bindings.items()))
 if component == 'ShengUfs':
-    # NativeUfs.o already defines the persistent-store callbacks. Only
-    # boot_progress_poll is still expected from the board while
+    # NativeUfs.o defines native_ufs_store_write but not its cached variant;
+    # NativeRamBlock.o imports the latter. Keep it weak so a board store
+    # implementation can replace it, and stub boot_progress_poll while
     # CONFIG_XNU_BOOT_PROGRESS is off.
-    text += ('.globl _boot_progress_poll\n.weak_definition _boot_progress_poll\n'
+    text += ('.globl _native_ufs_store_write_cached\n.weak_definition _native_ufs_store_write_cached\n'
+             '_native_ufs_store_write_cached:\n\tmov\tx0, #0\n\tret\n'
+             '.globl _boot_progress_poll\n.weak_definition _boot_progress_poll\n'
              '_boot_progress_poll:\n\tmov\tx0, #0\n\tret\n')
 assembly.write_text(text)
 subprocess.run(['xcrun', 'clang', '-target', 'arm64-apple-ios17.0', '-Werror', '-Wno-incompatible-sysroot',
