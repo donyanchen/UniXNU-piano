@@ -62,7 +62,7 @@ loader = "firmware"
 title = "Xiaomi Pad 8 Pro: XNU first boot"
 dram_size = "0x180000000"
 timeout = 10
-kernel_args = ["-v", "serial=0", "debug=0x14e", "cpus=1", "kt_fixed_zones=240", "sheng-pmgr=2", "startup_debug=0", "-no_corpses", "offline-legacy-gop=1", "pagani-platform-status=1"]
+kernel_args = ["-v", "serial=0", "debug=0x14e", "cpus=1", "kt_fixed_zones=240", "sheng-pmgr=2", "startup_debug=0", "-no_corpses", "offline-legacy-gop=1", "pagani-platform-status=1", "native-ufs-root=1"]
 trust_cache_sha256 = ["7416ca4f8377146626bb284e2133c76bee6cb4e3ee0af5d648b186235a7323a7"]
 
 [payload.adt]
@@ -71,6 +71,8 @@ unique_chip_id = "required"
 chip_id = "0x8011"
 packed_data_ramdisk = true
 owned_memory_size = "0x100000000"
+# APFS volume of 044-76040-038.dmg in the iPadOS 17.7.11 (21H461) IPSW.
+root_match_volume_uuid = "04769D26-2CA0-4825-B443-E2E5F88300F2"
 
 [bootimg]
 # The piano ABL loads the boot image ramtisk on fastboot boot.
@@ -84,6 +86,11 @@ windows = [
   { name = "OS", component = "OS" },
   { name = "SystemOS", component = "Cryptex1,SystemOS" },
 ]
+
+[userdata]
+first_lba = 44928768
+last_lba = 61705983
+lba_bytes = 4096
 
 [firmware]
 # The board UEFI (Mu-Silicium based, after its tools/setup-deps.sh):
