@@ -45,6 +45,11 @@ jobs:
         run: |
           (cd uefi && chmod +x tools/setup-deps.sh && ./tools/setup-deps.sh) || echo "setup-deps skipped"
           git apply device/patches/uefi/piano-dsc-unixnulib.patch
+          # Upstream BootShim.S writes FD_SIZE alone into the ARM64 image_size
+          # field; UniXNU bootimg needs the whole image (shim + volume) and
+          # rejects it otherwise. Patch the fetched Mu-Silicium checkout.
+          git -C uefi/deps/Mu-Silicium apply "$PWD/device/patches/uefi/bootshim-image-size.patch"
+          grep -n '_Payload - _Head' uefi/deps/Mu-Silicium/BootShim/BootShim.S
           mkdir -p device/package device/scripts
           wc -c device/package/PaganiPeripherals.h
           find device/modules -name 'build-*.py' -exec cp -v {} device/scripts/ \; 2>/dev/null || true

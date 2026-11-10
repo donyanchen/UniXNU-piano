@@ -190,6 +190,8 @@ next_action = ["Complete the payload and bootimg steps, then decide between a un
 evidence = [
   { kind = "source", reference = "board.toml", result = "prelink tool, kernel path, slide, roots and the boot image partition geometry" },
   { kind = "source", reference = ".github/workflows/package-bare-metal.yml", result = "kernel, package, firmware and payload steps pass on run 42812944686 (head 0c76f70); the payload step emits payload/payload.img at 160 MiB and the hardware device tree at device-tree/hardware.dtb, and the boot image step takes both --uefi and --dtb because it compiles BootShim, runs the Mu-Silicium mkbootimg.py and embeds the device tree in the image header" },
+  { kind = "source", reference = "patches/uefi/bootshim-image-size.patch", result = "bootimg rejected run 42816650617 with 'the ARM64 image header does not describe the shim plus the firmware volume': the pinned Mu-Silicium writes FD_SIZE alone into the image_size field (0x300000), while bootimg requires len(shim) + FD_SIZE (0x300070). The patch sets the field to 'FD_SIZE + _Payload - _Head'; an aarch64-none-elf build of the patched shim gives 112 shim bytes, _Payload at 0x70 and image_size 0x300070" },
+  { kind = "source", reference = "board.toml", result = "[bootimg.image] kernel_compression = none follows uefi/piano.toml [boot_image_kernel] kernel_compression = none; without it bootimg falls back to its gzip default for a board that asks for an uncompressed kernel field" },
 ]
 
 [[area]]

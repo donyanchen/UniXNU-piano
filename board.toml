@@ -81,6 +81,8 @@ root_match_volume_uuid = "04769D26-2CA0-4825-B443-E2E5F88300F2"
 # The piano ABL loads the boot image ramtisk on fastboot boot.
 embed_payload = true
 
+# uefi/piano.toml [boot_image_kernel] asks for an uncompressed kernel field;
+# UniXNU reads the same choice from here (its default is gzip).
 partition = "unixnu"
 first_lba = 44928768
 last_lba = 61705983
@@ -89,6 +91,11 @@ windows = [
   { name = "OS", component = "OS" },
   { name = "SystemOS", component = "Cryptex1,SystemOS" },
 ]
+
+# uefi/piano.toml [boot_image_kernel] asks for an uncompressed kernel field;
+# UniXNU reads the same choice from here (its default is gzip).
+[bootimg.image]
+kernel_compression = "none"
 
 [userdata]
 first_lba = 44928768

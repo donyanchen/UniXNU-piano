@@ -1,0 +1,21 @@
+From: piano bring-up
+Subject: [PATCH] BootShim: describe the whole image in the ARM64 header
+
+Upstream writes FD_SIZE into the ARM64 image_size field, which is only the
+firmware volume length and omits the shim bytes that precede it. UniXNU's
+bootimg step rejects such an image ("the ARM64 image header does not describe
+the shim plus the firmware volume"); the marble port fixed the same thing the
+same way. The expression resolves at assembly time, so the header keeps the
+exact value len(shim) + FD_SIZE.
+
+--- a/BootShim/BootShim.S
++++ b/BootShim/BootShim.S
+@@ -7,7 +7,7 @@ _StackBase:
+   .quad FD_BASE         /* Text Offset */
+ 
+ _StackSize:
+-  .quad FD_SIZE         /* Image Size */
++  .quad FD_SIZE + _Payload - _Head   /* Image Size */
+   .quad 0               /* Flags */
+   .quad 0               /* Reserved */
+   .quad 0               /* Reserved */
