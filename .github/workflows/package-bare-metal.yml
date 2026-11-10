@@ -117,7 +117,7 @@ jobs:
           # The PMGR audit reads the original kernelcache from a fixed path;
           # the IPSW fetch puts it at ipsw/21H461/kernelcache.decompressed.
           mkdir -p "$OUT/tree/.cache/firmware/kernelcache.macho"
-          cp "$PWD/$OUT/ipsw/21H461/kernelcache.decompressed" \
+          cp "$PWD/UniXNU/out/ipsw/21H461/kernelcache.decompressed" \
              "$OUT/tree/.cache/firmware/kernelcache.macho/kernelcache.release.ipad7.decompressed"
           cp "$BOOT/kernel/kernel.macho" "$OUT/tree/build/xnu-prelink/native-owner-ufs-rootauth3-candidate.macho"
           cp "$BOOT/kernel/kernel.json" "$OUT/tree/build/xnu-prelink/native-owner-ufs-rootauth3-candidate.json"
