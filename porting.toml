@@ -37,7 +37,7 @@ completion = ["The firmware step emits SILICIUM_UEFI.fd for pianoPkg with the Un
 limits = ["No firmware image has been booted on the device yet; the GOP handover is unverified."]
 next_action = ["Boot the firmware and capture its serial output before claiming the UEFI stage."]
 evidence = [
-  { kind = "source", reference = "patches/uefi/piano-start-unixnu.patch", result = "starts UniXNU.efi from the firmware volume before the ESP loader and AndroidBoot fallbacks, so the boot menu and its payload volume are reachable" },
+  { kind = "source", reference = "patches/uefi/piano-start-unixnu.patch", result = "starts UniXNU.efi from the firmware volume before the ESP loader and AndroidBoot fallbacks, so the boot menu and its payload volume are reachable; the patch names uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c because the UEFI repository carries its own uefi/ directory and prep applies it from the workspace root" },
   { kind = "source", reference = "patches/uefi/piano-dsc-unixnulib.patch", result = "adds the UniXNULib LibraryClasses mapping that fixes the error 4000 firmware build failure" },
 ]
 
