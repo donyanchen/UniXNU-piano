@@ -1,0 +1,12 @@
+diff --git a/uefi/pianoPkg/piano.dsc b/uefi/pianoPkg/piano.dsc
+--- a/uefi/pianoPkg/piano.dsc
++++ b/uefi/pianoPkg/piano.dsc
+@@ -110,6 +110,7 @@
+ !ifdef UNIXNU
+ [LibraryClasses]
+   HobLib|MdePkg/Library/DxeHobLib/DxeHobLib.inf
+   FdtLib|MdePkg/Library/BaseFdtLib/BaseFdtLib.inf
++  UniXNULib|UniXNUPkg/Library/UniXNULib/UniXNULib.inf
+ !endif
+
+ [LibraryClasses.common.SEC]

@@ -44,6 +44,7 @@ jobs:
       - name: prep
         run: |
           (cd uefi && chmod +x tools/setup-deps.sh && ./tools/setup-deps.sh) || echo "setup-deps skipped"
+          git apply device/patches/uefi/piano-dsc-unixnulib.patch
           mkdir -p device/package device/scripts
           wc -c device/package/PaganiPeripherals.h
           find device/modules -name 'build-*.py' -exec cp -v {} device/scripts/ \; 2>/dev/null || true
