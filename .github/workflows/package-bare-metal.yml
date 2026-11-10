@@ -50,11 +50,13 @@ jobs:
           # unreachable.
           git apply device/patches/uefi/piano-start-unixnu.patch
           grep -n 'mUniXNUFileGuid' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
-          # Report the USB fastboot bring-up step by step and hold each line:
-          # without a serial port the boot manager's screen clear is the only
-          # chance to see why piano-uefi never enumerates.
-          git apply device/patches/uefi/piano-usb-diagnostics.patch
-          grep -n 'UsbDevice protocol' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
+          # A vendor ABL refuses the 160 MiB payload ramdisk, so the payload
+          # arrives over USB instead: this raises the download cap, publishes
+          # the staged bytes as a block device and holds the boot menu back
+          # until they arrive. It also keeps the fastboot bring-up trace.
+          git apply device/patches/uefi/piano-fastboot-payload.patch
+          grep -n 'oem ramdisk' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
+          grep -n 'SIZE_256MB' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
           # Upstream BootShim.S writes FD_SIZE alone into the ARM64 image_size
           # field; UniXNU bootimg needs the whole image (shim + volume) and
           # rejects it otherwise. Patch the fetched Mu-Silicium checkout.
