@@ -1,0 +1,39 @@
+diff --git a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
+index c349968..5a4af96 100644
+--- a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
++++ b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
+@@ -724,9 +724,22 @@ PianoFastbootStart (
+     gBS->CloseEvent (InitEvent);
+   }
+ 
++  //
++  // Report every step on the console and hold it there: this board has no
++  // serial port, and the boot manager clears the screen when it draws, so a
++  // line printed only once is gone before anyone can read it.
++  //
++  Print (L"\nfastboot: controller event signalled\n");
++  gBS->Stall (2000000);
++
+   Status = gBS->LocateProtocol (&gEfiUsbDeviceProtocolGuid, NULL, (VOID **)&mUsb);
++  Print (L"fastboot: UsbDevice protocol %r\n", Status);
++  gBS->Stall (2000000);
++
+   if (!EFI_ERROR (Status)) {
+     Status = mUsb->StartEx (&mDescSet);
++    Print (L"fastboot: StartEx %r\n", Status);
++    gBS->Stall (2000000);
+   }
+ 
+   if (!EFI_ERROR (Status)) {
+@@ -747,9 +760,11 @@ PianoFastbootStart (
+ 
+   if (EFI_ERROR (Status)) {
+     Print (L"fastboot: not started (%r)\n", Status);
++    gBS->Stall (6000000);
+     return;
+   }
+ 
+   gBS->CreateEventEx (EVT_NOTIFY_SIGNAL, TPL_NOTIFY, FbExitBootServices, NULL, &gEfiEventExitBootServicesGuid, &mExitEvent);
+   Print (L"fastboot: ready as piano-uefi\n");
++  gBS->Stall (3000000);
+ }
