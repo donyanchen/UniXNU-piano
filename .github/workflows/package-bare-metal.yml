@@ -154,7 +154,9 @@ jobs:
       - name: bootimg
         working-directory: UniXNU
         run: |
-          ./unixnu bootimg -D ../device > /tmp/s9.log 2>&1 || { tail -50 /tmp/s9.log | sed 's/^/::error::/'; exit 1; }
+          # bootimg packs the UEFI firmware beside the payload, so it needs the
+          # Mu-Silicium checkout just like the firmware step.
+          ./unixnu bootimg -D ../device --uefi ../uefi/deps/Mu-Silicium > /tmp/s9.log 2>&1 || { tail -50 /tmp/s9.log | sed 's/^/::error::/'; exit 1; }
           tail -15 /tmp/s9.log
       - name: collect
         if: always()
