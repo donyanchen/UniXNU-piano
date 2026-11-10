@@ -189,6 +189,7 @@ limits = ["payload and bootimg have not completed yet, and no boot img has been 
 next_action = ["Complete the payload and bootimg steps, then decide between a unixnu partition and a DSU-style RAM boot before touching the device."]
 evidence = [
   { kind = "source", reference = "board.toml", result = "prelink tool, kernel path, slide, roots and the boot image partition geometry" },
+  { kind = "source", reference = ".github/workflows/package-bare-metal.yml", result = "kernel, package, firmware and payload steps pass on run 42807509030 (head 0c76f70); the payload step emits payload/payload.img at 160 MiB, and the boot image step needs --uefi because it compiles BootShim and runs the Mu-Silicium mkbootimg.py" },
 ]
 
 [[area]]
