@@ -1,7 +1,7 @@
-diff --git a/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c b/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
+diff --git a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
 index 9155161..9777864 100644
---- a/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
-+++ b/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
+--- a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
++++ b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
 @@ -73,6 +73,11 @@ STATIC EFI_GUID  mAndroidBootFileGuid = {
    0x2F6C1A4E, 0x8B3D, 0x4C57, { 0xA1, 0xE9, 0x6D, 0x0B, 0x7F, 0x3C, 0x5A, 0x21 }
  };
