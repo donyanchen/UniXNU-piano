@@ -59,6 +59,13 @@ jobs:
           target = "DEBUG"
           EOF
           ./unixnu defconfig piano_defconfig -D ../device > /tmp/s1.log 2>&1 || { tail -30 /tmp/s1.log | sed 's/^/::error::/'; exit 1; }
+          # build-sheng-platform-power.py compiles $TREE/kits/sheng/ShengPlatformPower.cpp,
+          # so the source must be staged there for both the main and the
+          # bootstrap tree (they are separate copies under out/).
+          for t in out/piano/ipados-17.7.11-21H461/piano/tree out/piano/ipados-17.7.11-21H461/piano_bootstrap/tree; do
+            mkdir -p "$t/kits/sheng"
+            cp ../device/package/ShengPlatformPower.cpp "$t/kits/sheng/ShengPlatformPower.cpp"
+          done
           tail -20 /tmp/s1.log
       - name: fetch
         working-directory: UniXNU
