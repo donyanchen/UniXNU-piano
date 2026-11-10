@@ -1,21 +1,29 @@
 From: piano bring-up
-Subject: [PATCH] BootShim: describe the whole image in the ARM64 header
+Subject: [PATCH] BootShim: describe the whole image and a zero text offset
 
-Upstream writes FD_SIZE into the ARM64 image_size field, which is only the
-firmware volume length and omits the shim bytes that precede it. UniXNU's
-bootimg step rejects such an image ("the ARM64 image header does not describe
-the shim plus the firmware volume"); the marble port fixed the same thing the
-same way. The expression resolves at assembly time, so the header keeps the
-exact value len(shim) + FD_SIZE.
+piano's ABL reads the ARM64 image header the way the ARM64 specification
+defines it:
+
+- image_size must describe the whole image (the shim plus the firmware
+  volume). Upstream writes FD_SIZE alone, which is only the volume.
+- text_offset is a displacement from the load address, not an absolute
+  address. Upstream writes FD_BASE there, so an ABL that computes
+  load + text_offset lands far outside the reservation, and the tablet
+  drops straight back to fastboot (observed: fastboot boot returns
+  "Booting OKAY" and nothing else happens).
+
+The stock piano kernel reports text_offset 0x0, and the shim's copy loop
+reads FD_BASE from a literal pool that this patch leaves alone.
 
 --- a/BootShim/BootShim.S
 +++ b/BootShim/BootShim.S
 @@ -7,7 +7,7 @@ _StackBase:
-   .quad FD_BASE         /* Text Offset */
+-  .quad FD_BASE         /* Text Offset */
++  .quad 0               /* Text Offset: displacement, not an address */
  
  _StackSize:
 -  .quad FD_SIZE         /* Image Size */
-+  .quad FD_SIZE + _Payload - _Head   /* Image Size */
++  .quad FD_SIZE + _Payload - _Head   /* Image Size: shim plus volume */
    .quad 0               /* Flags */
    .quad 0               /* Reserved */
    .quad 0               /* Reserved */
