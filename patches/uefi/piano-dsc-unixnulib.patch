@@ -1,6 +1,6 @@
-diff --git a/uefi/pianoPkg/piano.dsc b/uefi/pianoPkg/piano.dsc
---- a/uefi/pianoPkg/piano.dsc
-+++ b/uefi/pianoPkg/piano.dsc
+diff --git a/uefi/uefi/pianoPkg/piano.dsc b/uefi/uefi/pianoPkg/piano.dsc
+--- a/uefi/uefi/pianoPkg/piano.dsc
++++ b/uefi/uefi/pianoPkg/piano.dsc
 @@ -110,6 +110,7 @@
  !ifdef UNIXNU
  [LibraryClasses]
