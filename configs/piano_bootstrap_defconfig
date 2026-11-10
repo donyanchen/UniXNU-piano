@@ -1,0 +1,41 @@
+# Read-only owner-verified root with original AMFI and SystemOS startup support.
+CONFIG_XNU_BUILD_ARCHIVES=y
+CONFIG_XNU_SOURCE_CORECRYPTO14=y
+CONFIG_XNU_SOURCE_PTHREAD=y
+CONFIG_XNU_ARM_DT_PLATFORM=y
+CONFIG_XNU_ARMCPU=y
+CONFIG_XNU_NATIVE_ARCH_TIMER=y
+# SM8750 copyio must temporarily clear PAN when accessing user pages.
+CONFIG_XNU_NATIVE_PAN=y
+# The BCM2837 panic buffer address is not mapped on this device.
+CONFIG_XNU_DT_PANIC_REGION=y
+CONFIG_XNU_CRYPTO_BOOTSTRAP="prelinked"
+# CONFIG_XNU_ARMVIRT_PLATFORM is not set
+CONFIG_XNU_NATIVE_UFS=y
+CONFIG_XNU_NATIVE_AES=y
+CONFIG_XNU_VERIFIED_ROOT_PROBE=y
+CONFIG_XNU_NATIVE_VIRTIO_BLOCK=y
+# CONFIG_XNU_OWNER_ROOT_AUDIT is not set
+# CONFIG_XNU_OWNER_ROOT_TRUST is not set
+# CONFIG_XNU_TRUST_CACHE_RUNTIME is not set
+CONFIG_XNU_NATIVE_CS_HASH_CACHE=y
+# CONFIG_XNU_SHENG_PMGR is not set
+# CONFIG_XNU_OWNER_CACHE_MOUNT is not set
+# CONFIG_XNU_OWNER_CACHE_STARTUP is not set
+# CONFIG_XNU_OWNER_BOOT_MANIFEST is not set
+CONFIG_XNU_NATIVE_RAM_BLOCK=y
+# CONFIG_XNU_OWNER_DATA_MOUNT is not set
+# OWNER_DATA_VOLUME_UUID is set from the actual RAM seed before the build.
+# CONFIG_XNU_OWNER_UNION_SYSTEMOS is not set
+# CONFIG_XNU_NATIVE_ADRENO is not set
+# CONFIG_XNU_NATIVE_LEGACY_DISPLAY is not set
+# CONFIG_XNU_BOOT_PROGRESS is not set
+CONFIG_XNU_EARLY_BOOT_PROGRESS=y
+
+# Use the retained community archive names; official components keep their own defaults.
+CONFIG_XNU_NATIVE_UFS_ARCHIVE="{tree}/build/sheng-ufs/libShengUfs.a"
+CONFIG_XNU_NATIVE_AES_ARCHIVE="{tree}/build/software-aes/libSoftwareAES.a"
+CONFIG_XNU_NATIVE_VIRTIO_BLOCK_ARCHIVE="{tree}/build/virtio-mmio-block/libNativeVirtioBlock.a"
+CONFIG_XNU_NATIVE_RAM_BLOCK_ARCHIVE="{tree}/build/ram-block/libRamBlock.a"
+CONFIG_XNU_VERIFIED_ROOT_ARCHIVE="{tree}/build/verified-root-os-xnu-bundle/libVerifiedRootProbe.a"
+# CONFIG_XNU_SOURCE_MOCKFS is not set

@@ -86,6 +86,17 @@ jobs:
             --inputs "$IPSW" --openssl-prefix "$(brew --prefix openssl@3)" \
             > /tmp/s4b.log 2>&1 || { tail -50 /tmp/s4b.log | sed 's/^/::error::/'; exit 1; }
           tail -10 /tmp/s4b.log
+      - name: candidate
+        working-directory: UniXNU
+        run: |
+          OUT=out/piano/ipados-17.7.11-21H461/piano
+          ./unixnu defconfig piano_bootstrap_defconfig -D ../device > /tmp/s4c.log 2>&1 || { tail -30 /tmp/s4c.log | sed 's/^/::error::/'; exit 1; }
+          ./unixnu build kernel -D ../device -j ${{ inputs.jobs }} >> /tmp/s4c.log 2>&1 || { tail -50 /tmp/s4c.log | sed 's/^/::error::/'; exit 1; }
+          mkdir -p "$OUT/tree/build/xnu-prelink"
+          cp "$OUT/kernel/kernel.macho" "$OUT/tree/build/xnu-prelink/native-owner-ufs-rootauth3-candidate.macho"
+          cp "$OUT/kernel/kernel.json" "$OUT/tree/build/xnu-prelink/native-owner-ufs-rootauth3-candidate.json"
+          ls -l "$OUT/tree/build/xnu-prelink/"
+          ./unixnu defconfig piano_defconfig -D ../device > /tmp/s4d.log 2>&1 || { tail -30 /tmp/s4d.log | sed 's/^/::error::/'; exit 1; }
       - name: kernel
         working-directory: UniXNU
         run: |
