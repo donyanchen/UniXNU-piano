@@ -1,12 +1,26 @@
 diff --git a/uefi/uefi/pianoPkg/piano.dsc b/uefi/uefi/pianoPkg/piano.dsc
+index 57da3b9..c60cc1c 100644
 --- a/uefi/uefi/pianoPkg/piano.dsc
 +++ b/uefi/uefi/pianoPkg/piano.dsc
-@@ -110,6 +110,7 @@
- !ifdef UNIXNU
+@@ -39,6 +39,13 @@
+   #
+   SOC_TYPE                       = 0
+ 
++  #
++  # PakalaPkg.dsc.inc leaves ENABLE_SECUREBOOT empty and SecureBootHandler.c
++  # does '#if ENABLE_SECUREBOOT == 1', which fails under -Werror. This board
++  # has no secure boot payload to enable.
++  #
++  DEFINE ENABLE_SECUREBOOT       = 0
++
+ !include PakalaPkg/PakalaPkg.dsc.inc
+ 
+ [PcdsFixedAtBuild]
+@@ -110,6 +117,7 @@
  [LibraryClasses]
    HobLib|MdePkg/Library/DxeHobLib/DxeHobLib.inf
    FdtLib|MdePkg/Library/BaseFdtLib/BaseFdtLib.inf
 +  UniXNULib|UniXNUPkg/Library/UniXNULib/UniXNULib.inf
  !endif
-
+ 
  [LibraryClasses.common.SEC]
