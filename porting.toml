@@ -19,7 +19,7 @@ completion = ["All source pins resolve, every selected component is covered by a
 limits = ["The UniXNU revision is pinned in the workflow; the effective component set is only visible through ./unixnu status."]
 next_action = ["Compare ./unixnu status --json output whenever a defconfig, fragment or source pin changes."]
 evidence = [
-  { kind = "source", reference = ".github/workflows/package-bare-metal.yml", result = "candidate pass, ShengPlatformPower.cpp staging and the fixed kernelcache path for the PMGR audit; the prep step also applies patches/uefi/piano-dsc-unixnulib.patch and patches/uefi/piano-start-unixnu.patch, patches/uefi/bootshim-image-size.patch and patches/uefi/mu-sec-entry-arg.patch (the last two against uefi/deps/Mu-Silicium, because that checkout and its BootShim and SEC sources only exist after tools/setup-deps.sh), and patches/unixnu-bootimg-text-offset.patch against the pinned UniXNU checkout" },
+  { kind = "source", reference = ".github/workflows/package-bare-metal.yml", result = "candidate pass, ShengPlatformPower.cpp staging and the fixed kernelcache path for the PMGR audit; the prep step also applies patches/uefi/piano-dsc-unixnulib.patch and patches/uefi/piano-start-unixnu.patch, patches/uefi/bootshim-image-size.patch and patches/uefi/mu-sec-entry-arg.patch (the last two against uefi/deps/Mu-Silicium, because that checkout and its BootShim and SEC sources only exist after tools/setup-deps.sh), and patches/unixnu-bootimg-text-offset.patch against the pinned UniXNU checkout, and runs scripts/prepare-unixnu-diagnostics.py on its UniXNULib/Config.c" },
   { kind = "source", reference = "configs/piano_bootstrap_defconfig", result = "bootstrap selection: identical to piano_defconfig except CONFIG_XNU_SHENG_PMGR" },
   { kind = "source", reference = "board.toml", result = "board identity, component selection, [kernel].archives and [package].unixnu the packaging workflow consumes" },
 ]
@@ -207,10 +207,11 @@ paths = ["scripts/check-*", "scripts/probe-*", "scripts/audit-*", "scripts/read-
 inputs = ["UEFI serial output, the XNU verbose boot log, and the boot_progress_poll weak stub added in d185787."]
 configuration = ["CONFIG_XNU_EARLY_BOOT_PROGRESS is enabled; CONFIG_XNU_BOOT_PROGRESS is not set.", "[payload].kernel_args carries -v, debug=0x14e, startup_debug=0 and pagani-platform-status=1."]
 procedure = ["Capture the UEFI serial console during fastboot boot.", "Read the panic and progress lines from the captured output."]
-findings = ["The early boot progress path needs boot_progress_poll, which a weak stub provides until a board implementation exists (d185787).", "Several patch series add panic output for early boot (zzzz-early-boot-progress, zzzzz-root-panic-progress, zzzz-boot-progress-panic-output), so a failure before serial init still reaches the screen."]
+findings = ["The early boot progress path needs boot_progress_poll, which a weak stub provides until a board implementation exists (d185787).", "Several patch series add panic output for early boot (zzzz-early-boot-progress, zzzzz-root-panic-progress, zzzz-boot-progress-panic-output), so a failure before serial init still reaches the screen.", "piano has no serial console, so the first UEFI boots gave no evidence about the payload: UniXNURamDiskDxe publishes nothing and the menu only said 'no boot entry found'. scripts/prepare-unixnu-diagnostics.py rewrites that line during packaging so it reads 'payload volume missing' or 'config unreadable', which separates a missing initrd handoff from an unreadable FAT volume without any cabling."]
 completion = ["Each claimed milestone has a reproducible command, a matching image revision and an accessible result."]
 limits = ["No serial capture of a device boot exists yet."]
 next_action = ["Set up a serial or pstore capture before the first RAM boot."]
 evidence = [
+  { kind = "source", reference = "scripts/prepare-unixnu-diagnostics.py", result = "makes the built-in fallback message report whether the payload volume is reachable, so a board without a serial console can be diagnosed from the menu alone" },
   { kind = "source", reference = "patches/xnu/series", result = "early boot progress and panic output patches applied to the XNU tree" },
 ]

@@ -65,6 +65,11 @@ jobs:
           # writes 0, which the pinned bootimg.py rejects; accept either.
           git -C UniXNU apply "$PWD/device/patches/unixnu-bootimg-text-offset.patch"
           grep -n 'text_offset not in' UniXNU/scripts/unixnu/bootimg.py
+          # piano has no serial console: make the menu state whether the payload
+          # volume was published at all, so the next boot is diagnosable from the
+          # screen alone.
+          python3 device/scripts/prepare-unixnu-diagnostics.py UniXNU/package/UniXNUPkg/Library/UniXNULib/Config.c
+          grep -n 'payload volume missing' UniXNU/package/UniXNUPkg/Library/UniXNULib/Config.c
           mkdir -p device/package device/scripts
           wc -c device/package/PaganiPeripherals.h
           find device/modules -name 'build-*.py' -exec cp -v {} device/scripts/ \; 2>/dev/null || true
