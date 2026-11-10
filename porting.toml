@@ -19,8 +19,9 @@ completion = ["All source pins resolve, every selected component is covered by a
 limits = ["The UniXNU revision is pinned in the workflow; the effective component set is only visible through ./unixnu status."]
 next_action = ["Compare ./unixnu status --json output whenever a defconfig, fragment or source pin changes."]
 evidence = [
-  { kind = "source", reference = ".github/workflows/package-bare-metal.yml", result = "candidate pass, ShengPlatformPower.cpp staging and the fixed kernelcache path for the PMGR audit" },
+  { kind = "source", reference = ".github/workflows/package-bare-metal.yml", result = "candidate pass, ShengPlatformPower.cpp staging and the fixed kernelcache path for the PMGR audit; the prep step also applies patches/uefi/piano-dsc-unixnulib.patch and patches/uefi/bootshim-image-size.patch, the latter against uefi/deps/Mu-Silicium because BootShim is only fetched after tools/setup-deps.sh" },
   { kind = "source", reference = "configs/piano_bootstrap_defconfig", result = "bootstrap selection: identical to piano_defconfig except CONFIG_XNU_SHENG_PMGR" },
+  { kind = "source", reference = "board.toml", result = "board identity, component selection, [kernel].archives and [package].unixnu the packaging workflow consumes" },
 ]
 
 [[area]]
