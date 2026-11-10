@@ -50,6 +50,10 @@ jobs:
           # rejects it otherwise. Patch the fetched Mu-Silicium checkout.
           git -C uefi/deps/Mu-Silicium apply "$PWD/device/patches/uefi/bootshim-image-size.patch"
           grep -n '_Payload - _Head' uefi/deps/Mu-Silicium/BootShim/BootShim.S
+          # Mu-Silicium's SEC drops the device tree pointer the firmware passes
+          # in x0; UniXNURamDiskDxe needs it in a HOB to publish the payload.
+          git -C uefi/deps/Mu-Silicium apply "$PWD/device/patches/uefi/mu-sec-entry-arg.patch"
+          grep -n 'mEntryArg = Dtb' uefi/deps/Mu-Silicium/Silicon/Silicium/SiliciumPkg/Sec/Sec.c
           mkdir -p device/package device/scripts
           wc -c device/package/PaganiPeripherals.h
           find device/modules -name 'build-*.py' -exec cp -v {} device/scripts/ \; 2>/dev/null || true

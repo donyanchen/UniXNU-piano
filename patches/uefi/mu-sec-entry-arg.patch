@@ -1,0 +1,88 @@
+diff --git a/Silicon/Silicium/SiliciumPkg/Sec/AArch64/ModuleEntryPoint.S b/Silicon/Silicium/SiliciumPkg/Sec/AArch64/ModuleEntryPoint.S
+index 0c05ffa..5c8d930 100644
+--- a/Silicon/Silicium/SiliciumPkg/Sec/AArch64/ModuleEntryPoint.S
++++ b/Silicon/Silicium/SiliciumPkg/Sec/AArch64/ModuleEntryPoint.S
+@@ -13,6 +13,10 @@
+ .set CTRL_SPAN_BIT, BIT23
+ 
+ ASM_FUNC (_ModuleEntryPoint)
++  // Keep the firmware's x0 (the device tree pointer) across the platform
++  // initialisation; x19 is callee-saved, so the calls below preserve it.
++  mov   x19, x0
++
+   // Do Platform Specific Initialization
+   bl    ASM_PFX (PlatformAssemblyInitialize)
+ 
+@@ -50,14 +54,15 @@ ASM_PFX (MainEntryPoint):
+   cmp   x0, x2
+   b.lt  0b
+ 
+-  // Set Jump Location
+-  ldr   x0, =ASM_PFX (SecEntry)
++  // Pass the device tree pointer as SecEntry's first argument
++  mov   x0, x19
+ 
+   // Clear Frame Pointer
+   mov   x29, xzr
+ 
+   // Jump to C Code
+-  blr   x0
++  ldr   x16, =ASM_PFX (SecEntry)
++  blr   x16
+ 
+   // Do Infinite Spin
+   b     .
+diff --git a/Silicon/Silicium/SiliciumPkg/Sec/Sec.c b/Silicon/Silicium/SiliciumPkg/Sec/Sec.c
+index 8d586b3..dfaefe6 100644
+--- a/Silicon/Silicium/SiliciumPkg/Sec/Sec.c
++++ b/Silicon/Silicium/SiliciumPkg/Sec/Sec.c
+@@ -18,6 +18,16 @@
+ 
+ #include "Sec.h"
+ 
++//
++// The device tree pointer the firmware passed in x0. UniXNURamDiskDxe
++// looks it up through this GUID to publish the payload volume.
++//
++STATIC CONST EFI_GUID  mEntryArgHobGuid = {
++  0xDAEE82E6, 0x8090, 0x4E72, { 0xBF, 0xB9, 0x78, 0xC1, 0x3C, 0xD4, 0xE3, 0x59 }
++};
++
++STATIC UINT64  mEntryArg = 0;
++
+ #ifndef MDEPKG_NDEBUG
+ STATIC
+ VOID
+@@ -118,6 +128,18 @@ SecMain (VOID)
+     return;
+   }
+ 
++  //
++  // Publish the device tree pointer the firmware handed over in x0.
++  //
++  if (mEntryArg != 0) {
++    UINT64  *EntryArg;
++
++    EntryArg = BuildGuidHob (&mEntryArgHobGuid, sizeof (UINT64));
++    if (EntryArg != NULL) {
++      *EntryArg = mEntryArg;
++    }
++  }
++
+   // Build CPU HOB
+   BuildCpuHob (ArmGetPhysicalAddressBits (), PcdGet8 (PcdPrePiCpuIoSize));
+ 
+@@ -148,8 +170,12 @@ SecMain (VOID)
+ }
+ 
+ VOID
+-SecEntry (VOID)
++SecEntry (
++  IN UINT64  Dtb
++  )
+ {
++  mEntryArg = Dtb;
++
+   // Disable Data Cache
+   ArmDisableDataCache ();
+ 
