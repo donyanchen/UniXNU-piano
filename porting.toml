@@ -203,7 +203,7 @@ evidence = [
 id = "diagnostics"
 status = "planned"
 components = ["VerifiedRoot", "AppleKeyStoreState"]
-paths = ["scripts/check-*", "scripts/probe-*", "scripts/audit-*", "scripts/read-*", "scripts/data/**", "package/tests/**", "package/*Tests*", "package/*Diagnostic*", "package/*Probe*", "package/Boot*", "package/linux-log/**", "unixnu.lock"]
+paths = ["scripts/check-*", "scripts/probe-*", "scripts/audit-*", "scripts/read-*", "scripts/prepare-unixnu-diagnostics.py", "scripts/data/**", "package/tests/**", "package/*Tests*", "package/*Diagnostic*", "package/*Probe*", "package/Boot*", "package/linux-log/**", "unixnu.lock"]
 inputs = ["UEFI serial output, the XNU verbose boot log, and the boot_progress_poll weak stub added in d185787."]
 configuration = ["CONFIG_XNU_EARLY_BOOT_PROGRESS is enabled; CONFIG_XNU_BOOT_PROGRESS is not set.", "[payload].kernel_args carries -v, debug=0x14e, startup_debug=0 and pagani-platform-status=1."]
 procedure = ["Capture the UEFI serial console during fastboot boot.", "Read the panic and progress lines from the captured output."]
