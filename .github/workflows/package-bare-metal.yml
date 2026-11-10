@@ -45,6 +45,11 @@ jobs:
         run: |
           (cd uefi && chmod +x tools/setup-deps.sh && ./tools/setup-deps.sh) || echo "setup-deps skipped"
           git apply device/patches/uefi/piano-dsc-unixnulib.patch
+          # The stock boot manager never starts UniXNU: it goes straight to the
+          # ESP loader and AndroidBoot, so the menu in the firmware volume was
+          # unreachable.
+          git apply device/patches/uefi/piano-start-unixnu.patch
+          grep -n 'mUniXNUFileGuid' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
           # Upstream BootShim.S writes FD_SIZE alone into the ARM64 image_size
           # field; UniXNU bootimg needs the whole image (shim + volume) and
           # rejects it otherwise. Patch the fetched Mu-Silicium checkout.

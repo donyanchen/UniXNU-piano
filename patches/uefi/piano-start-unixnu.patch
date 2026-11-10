@@ -1,0 +1,30 @@
+diff --git a/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c b/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
+index 9155161..9777864 100644
+--- a/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
++++ b/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
+@@ -73,6 +73,11 @@ STATIC EFI_GUID  mAndroidBootFileGuid = {
+   0x2F6C1A4E, 0x8B3D, 0x4C57, { 0xA1, 0xE9, 0x6D, 0x0B, 0x7F, 0x3C, 0x5A, 0x21 }
+ };
+ 
++// UniXNU.efi in the firmware volume (FILE_GUID in UniXNUPkg/Application/UniXNU).
++STATIC EFI_GUID  mUniXNUFileGuid = {
++  0x9B665204, 0xA133, 0x47A2, { 0x93, 0x96, 0x9E, 0x2B, 0x37, 0x0A, 0x4E, 0x25 }
++};
++
+ // Start an application from our own firmware volume by its file GUID.
+ STATIC
+ VOID
+@@ -149,6 +154,13 @@ DeviceBootManagerAfterConsole ()
+   PianoResetHookInstall ();
+   PianoDtbInstall ();
+   PianoFastbootStart ();
++
++  // UniXNU owns the boot menu when the board builds it into the volume: it
++  // publishes the payload volume, offers its entries and starts XNU. It only
++  // returns when it cannot run, so the ESP loader and Android stay as the
++  // fallbacks below.
++  StartFvApp (&mUniXNUFileGuid, L"UniXNU");
++
+   StartEspLoader ();
+ 
+   StartFvApp (&mAndroidBootFileGuid, L"Android");
