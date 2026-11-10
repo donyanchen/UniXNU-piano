@@ -103,7 +103,13 @@ jobs:
           # produces. Drop it for the bootstrap build and restore it after; the
           # bootstrap link never force-loads libShengPlatformPower.a because
           # CONFIG_XNU_SHENG_PMGR is off there.
-          sed -i '/build-sheng-platform-power.py/d' ../device/board.toml
+          # macOS ships BSD sed, where -i takes its suffix as a separate
+          # argument; do the removal with python instead.
+          python3 -c 'import pathlib;p=pathlib.Path("../device/board.toml");p.write_text("".join(l for l in p.read_text().splitlines(True) if "build-sheng-platform-power.py" not in l))'
+          if grep -q 'build-sheng-platform-power' ../device/board.toml; then
+            echo 'the bootstrap board.toml still selects the PMGR binder' >&2
+            exit 1
+          fi
           ./unixnu defconfig piano_bootstrap_defconfig -D ../device > /tmp/s4c.log 2>&1 || { tail -30 /tmp/s4c.log | sed 's/^/::error::/'; exit 1; }
           ./unixnu build kernel -D ../device -j ${{ inputs.jobs }} >> /tmp/s4c.log 2>&1 || { tail -50 /tmp/s4c.log | sed 's/^/::error::/'; exit 1; }
           git -C ../device checkout -- board.toml
