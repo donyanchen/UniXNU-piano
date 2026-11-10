@@ -1,31 +1,67 @@
 diff --git a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
-index c349968..5a4af96 100644
+index c349968..f055881 100644
 --- a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
 +++ b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
-@@ -724,9 +724,22 @@ PianoFastbootStart (
+@@ -715,6 +715,7 @@ PianoFastbootStart (
+ {
+   EFI_STATUS  Status;
+   EFI_EVENT   InitEvent;
++  UINTN       Tries;
+ 
+   LogStart ();
+ 
+@@ -724,9 +725,48 @@ PianoFastbootStart (
      gBS->CloseEvent (InitEvent);
    }
  
+-  Status = gBS->LocateProtocol (&gEfiUsbDeviceProtocolGuid, NULL, (VOID **)&mUsb);
 +  //
 +  // Report every step on the console and hold it there: this board has no
 +  // serial port, and the boot manager clears the screen when it draws, so a
 +  // line printed only once is gone before anyone can read it.
 +  //
 +  Print (L"\nfastboot: controller event signalled\n");
-+  gBS->Stall (2000000);
++  gBS->Stall (500000);
 +
-   Status = gBS->LocateProtocol (&gEfiUsbDeviceProtocolGuid, NULL, (VOID **)&mUsb);
-+  Print (L"fastboot: UsbDevice protocol %r\n", Status);
++  //
++  // The controller comes up asynchronously, and BDS reaches this hook early.
++  // Ask for the protocol repeatedly instead of once: a single lookup right
++  // after the event loses the race and silently leaves the board without a
++  // fastboot interface.
++  //
++  for (Tries = 0; Tries < 10; Tries++) {
++    Status = gBS->LocateProtocol (&gEfiUsbDeviceProtocolGuid, NULL, (VOID **)&mUsb);
++    if (!EFI_ERROR (Status)) {
++      break;
++    }
++
++    gBS->Stall (200000);
++  }
++
++  Print (L"fastboot: UsbDevice protocol %r after %u tries\n", Status, Tries);
 +  gBS->Stall (2000000);
 +
    if (!EFI_ERROR (Status)) {
-     Status = mUsb->StartEx (&mDescSet);
-+    Print (L"fastboot: StartEx %r\n", Status);
+-    Status = mUsb->StartEx (&mDescSet);
++    //
++    // Starting the device role needs the PHY and the rails to be settled;
++    // retry rather than give up on the first refusal.
++    //
++    for (Tries = 0; Tries < 5; Tries++) {
++      Status = mUsb->StartEx (&mDescSet);
++      if (!EFI_ERROR (Status)) {
++        break;
++      }
++
++      gBS->Stall (300000);
++    }
++
++    Print (L"fastboot: StartEx %r after %u tries\n", Status, Tries);
 +    gBS->Stall (2000000);
    }
  
    if (!EFI_ERROR (Status)) {
-@@ -747,9 +760,11 @@ PianoFastbootStart (
+@@ -747,9 +787,11 @@ PianoFastbootStart (
  
    if (EFI_ERROR (Status)) {
      Print (L"fastboot: not started (%r)\n", Status);
