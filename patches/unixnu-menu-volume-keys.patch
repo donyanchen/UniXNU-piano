@@ -1,0 +1,25 @@
+diff --git a/package/UniXNUPkg/Library/UniXNULib/Menu.c b/package/UniXNUPkg/Library/UniXNULib/Menu.c
+index e3e4619..08902a7 100644
+--- a/package/UniXNUPkg/Library/UniXNULib/Menu.c
++++ b/package/UniXNUPkg/Library/UniXNULib/Menu.c
+@@ -216,9 +216,9 @@ UniXNUMenuRun (
+         Selected    = Config->DefaultIndex;
+       }
+ 
+-      if ((Key.ScanCode == SCAN_UP) || (Key.UnicodeChar == L'k')) {
++      if ((Key.ScanCode == SCAN_UP) || (Key.ScanCode == SCAN_LEFT) || (Key.UnicodeChar == L'k')) {
+         Selected = (Selected + Count - 1) % Count;
+-      } else if ((Key.ScanCode == SCAN_DOWN) || (Key.UnicodeChar == L'j')) {
++      } else if ((Key.ScanCode == SCAN_DOWN) || (Key.ScanCode == SCAN_RIGHT) || (Key.UnicodeChar == L'j')) {
+         Selected = (Selected + 1) % Count;
+       } else if (Key.ScanCode == SCAN_HOME) {
+         Selected = 0;
+@@ -229,7 +229,7 @@ UniXNUMenuRun (
+         UniXNULog ("menu: key %c, booting %u", Key.UnicodeChar, (UINT32)Selected);
+         break;
+       } else if ((Key.UnicodeChar == CHAR_CARRIAGE_RETURN) || (Key.UnicodeChar == CHAR_LINEFEED) ||
+-                 (Key.UnicodeChar == L' ') || (Key.ScanCode == SCAN_RIGHT) || (Key.ScanCode == SCAN_SUSPEND))
++                 (Key.UnicodeChar == L' ') || (Key.ScanCode == SCAN_SUSPEND))
+       {
+         UniXNULog ("menu: enter, booting %u", (UINT32)Selected);
+         break;
