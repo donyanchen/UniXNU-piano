@@ -1,19 +1,43 @@
 diff --git a/DarwinBootPkg/Driver/BootVideo.h b/DarwinBootPkg/Driver/BootVideo.h
-index 2bbb634..e6ff1a6 100644
+index 2bbb634..ad30016 100644
 --- a/DarwinBootPkg/Driver/BootVideo.h
 +++ b/DarwinBootPkg/Driver/BootVideo.h
-@@ -18,7 +18,8 @@ DarwinBootVideoFromGop (CONST EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, UINT64 Video[6]
+@@ -5,6 +5,7 @@
+ #include <Uefi.h>
+ #include <Library/BaseMemoryLib.h>
+ #include <Protocol/GraphicsOutput.h>
++#include <Library/DebugLib.h>
+ 
+ STATIC
+ EFI_STATUS
+@@ -18,7 +19,24 @@ DarwinBootVideoFromGop (CONST EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, UINT64 Video[6]
    if ((Gop->Mode == NULL) || (Gop->Mode->Info == NULL) ||
        (Gop->Mode->SizeOfInfo < sizeof (*Info))) { return EFI_COMPROMISED_DATA; }
    Info = Gop->Mode->Info;
 -  if (Info->PixelFormat != PixelBlueGreenRedReserved8BitPerColor) { return EFI_UNSUPPORTED; }
++  DEBUG ((DEBUG_ERROR, "DARWINBOOT: gop format %u %lux%lu row %u\n",
++          (UINT32)Info->PixelFormat, Info->HorizontalResolution,
++          Info->VerticalResolution, Info->PixelsPerScanLine));
++  //
++  // This tablet's panel comes up as PixelRedGreenBlueReserved8BitPerColor and
++  // the firmware's own UI draws it fine. DarwinBoot only accepted the BGR
++  // order and turned the whole boot into EFI_UNSUPPORTED, so take every 32-bit
++  // order here; a swapped channel shows up as a colour shift in the kernel
++  // console, which is cheaper than never reaching it.
++  //
 +  if ((Info->PixelFormat != PixelBlueGreenRedReserved8BitPerColor) &&
-+      (Info->PixelFormat != PixelRedGreenBlueReserved8BitPerColor)) { return EFI_UNSUPPORTED; }
++      (Info->PixelFormat != PixelRedGreenBlueReserved8BitPerColor) &&
++      (Info->PixelFormat != PixelBitMask)) { return EFI_UNSUPPORTED; }
++  if (Info->PixelFormat == PixelBitMask) {
++    DEBUG ((DEBUG_ERROR, "DARWINBOOT: gop bitmask %08x %08x %08x %08x\n",
++      Info->PixelInformation.RedMask, Info->PixelInformation.GreenMask,
++      Info->PixelInformation.BlueMask, Info->PixelInformation.ReservedMask));
++  }
    RowBytes = (UINT64)Info->PixelsPerScanLine * 4;
    if ((Info->HorizontalResolution == 0) || (Info->VerticalResolution == 0) ||
        (Info->PixelsPerScanLine < Info->HorizontalResolution) ||
 diff --git a/DarwinBootPkg/Driver/DarwinBoot.c b/DarwinBootPkg/Driver/DarwinBoot.c
-index 3b6cafc..3a7a23f 100644
+index 3b6cafc..badc8d5 100644
 --- a/DarwinBootPkg/Driver/DarwinBoot.c
 +++ b/DarwinBootPkg/Driver/DarwinBoot.c
 @@ -602,8 +602,20 @@ Boot (
@@ -21,8 +45,8 @@ index 3b6cafc..3a7a23f 100644
    (VOID)This;
    if ((Request == NULL) || (Request->Volume == NULL) || (Request->KernelPath == NULL)) { return EFI_INVALID_PARAMETER; }
 +  //
-+  // piano bring-up: state every input the guard below looks at, in the memory log.
-+  // Print () only reaches ConOut and this board has no other channel.
++  // piano bring-up: the memory log is the only channel this board has, so the
++  // guard states its inputs before it can reject the request.
 +  //
 +  DEBUG ((
 +    DEBUG_ERROR,
@@ -38,6 +62,14 @@ index 3b6cafc..3a7a23f 100644
      Print (L"DARWINBOOT: unsupported inputs or exception level; firmware retained\n");
      return EFI_UNSUPPORTED;
    }
+@@ -826,6 +838,7 @@ Boot (
+   CpuDeadLoop ();
+   return EFI_ABORTED;
+ Fail:
++  DEBUG ((DEBUG_ERROR, "DARWINBOOT: fail status %r\n", Status));
+   if (Root != NULL) { Root->Close (Root); }
+   if (Image != NULL) { FreePool (Image); }
+   if (Tree != NULL) { FreePool (Tree); }
 diff --git a/DarwinBootPkg/Driver/Entry.S b/DarwinBootPkg/Driver/Entry.S
 index a7a55c2..53b552d 100644
 --- a/DarwinBootPkg/Driver/Entry.S
