@@ -368,7 +368,7 @@ index c349968..f5be452 100644
    }
  
    if (!EFI_ERROR (Status)) {
-@@ -747,9 +949,42 @@ PianoFastbootStart (
+@@ -747,9 +949,64 @@ PianoFastbootStart (
  
    if (EFI_ERROR (Status)) {
      Print (L"fastboot: not started (%r)\n", Status);
@@ -392,22 +392,44 @@ index c349968..f5be452 100644
 +  )
 +{
 +  UINTN  Elapsed;
++  UINTN  Pumps;
 +
 +  if (mVolumeReady) {
 +    return TRUE;
 +  }
 +
-+  Print (L"fastboot: waiting %u s for a payload (fastboot stage, then oem ramdisk)\n", (UINT32)(TimeoutMs / 1000));
-+
-+  for (Elapsed = 0; Elapsed < TimeoutMs; Elapsed += 100) {
-+    if (mVolumeReady) {
-+      Print (L"fastboot: payload volume published after %u ms\n", (UINT32)Elapsed);
-+      return TRUE;
-+    }
-+
-+    gBS->Stall (100000);
++  if ((mUsb == NULL) || (mPollEvent == NULL)) {
++    Print (L"fastboot: no payload channel, continuing without one\n");
++    return FALSE;
 +  }
 +
-+  Print (L"fastboot: no payload arrived, continuing without one\n");
++  Print (L"fastboot: waiting %u s for a payload (fastboot stage, then oem ramdisk)\n", (UINT32)(TimeoutMs / 1000));
++
++  //
++  // gBS->Stall () is a busy wait on the metronome and dispatches no event
++  // notify, so the periodic FbPoll event that reads the fastboot endpoint
++  // would never run: the host could not stage anything and the loop would
++  // sit out its whole timeout with the USB link idle. Pump FbPoll by hand
++  // instead, with the periodic timer cancelled so the two paths cannot
++  // overlap.
++  //
++  gBS->SetTimer (mPollEvent, TimerCancel, 0);
++
++  for (Elapsed = 0; (Elapsed < TimeoutMs) && !mVolumeReady; Elapsed += 10) {
++    for (Pumps = 0; (Pumps < 5) && !mVolumeReady; Pumps++) {
++      FbPoll (NULL, NULL);
++      if (!mVolumeReady) {
++        gBS->Stall (2000);
++      }
++    }
++  }
++
++  if (mVolumeReady) {
++    Print (L"fastboot: payload volume published after %u ms\n", (UINT32)Elapsed);
++  } else {
++    Print (L"fastboot: no payload arrived, continuing without one\n");
++    gBS->SetTimer (mPollEvent, TimerPeriodic, EFI_TIMER_PERIOD_MILLISECONDS (FB_POLL_MS));
++  }
++
 +  return mVolumeReady;
  }
