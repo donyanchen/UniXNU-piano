@@ -78,6 +78,7 @@ jobs:
           # the kernel with `br x1`; XNU must start at EL1. The loader now takes
           # EL2 as well and switches to EL1 (HCR_EL2.RW, SPSR_EL2/ELR_EL2, eret)
           # right before entering the kernel.
+          git -C UniXNU submodule update --init --depth 1 drivers/DarwinBoot
           git -C UniXNU/drivers/DarwinBoot apply "$PWD/device/patches/darwinboot-el1.patch"
           grep -n 'EL2' UniXNU/drivers/DarwinBoot/DarwinBootPkg/Driver/Entry.S
           # Payload volume: a 160 MiB FAT32 volume with 2 KiB clusters answers
