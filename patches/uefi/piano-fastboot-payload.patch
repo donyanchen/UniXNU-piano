@@ -1,5 +1,5 @@
 diff --git a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
-index 9155161..f2ab41c 100644
+index 9155161..c33f959 100644
 --- a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
 +++ b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
 @@ -12,6 +12,8 @@
@@ -119,7 +119,7 @@ index fb04f58..d90c151 100644
 +
  #endif
 diff --git a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
-index c349968..f5be452 100644
+index c349968..99597db 100644
 --- a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
 +++ b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
 @@ -20,6 +20,8 @@
@@ -325,7 +325,7 @@ index c349968..f5be452 100644
  STATIC
  VOID
  FbCommand (
-@@ -570,6 +720,25 @@ FbCommand (
+@@ -570,6 +750,25 @@ FbCommand (
      StageDebugLog ();
    } else if (AsciiStrCmp (Cmd, "oem screenshot") == 0) {
      StageScreenshot ();
@@ -351,7 +351,7 @@ index c349968..f5be452 100644
    } else if (AsciiStrCmp (Cmd, "boot") == 0) {
      if (mDataSize == 0) {
        FbFail ("nothing downloaded");
-@@ -715,6 +877,7 @@ PianoFastbootStart (
+@@ -715,6 +914,7 @@ PianoFastbootStart (
  {
    EFI_STATUS  Status;
    EFI_EVENT   InitEvent;
@@ -359,7 +359,7 @@ index c349968..f5be452 100644
  
    LogStart ();
  
-@@ -724,9 +887,48 @@ PianoFastbootStart (
+@@ -724,9 +924,48 @@ PianoFastbootStart (
      gBS->CloseEvent (InitEvent);
    }
  
@@ -410,7 +410,7 @@ index c349968..f5be452 100644
    }
  
    if (!EFI_ERROR (Status)) {
-@@ -747,9 +949,64 @@ PianoFastbootStart (
+@@ -747,9 +986,74 @@ PianoFastbootStart (
  
    if (EFI_ERROR (Status)) {
      Print (L"fastboot: not started (%r)\n", Status);
@@ -470,8 +470,18 @@ index c349968..f5be452 100644
 +    Print (L"fastboot: payload volume published after %u ms\n", (UINT32)Elapsed);
 +  } else {
 +    Print (L"fastboot: no payload arrived, continuing without one\n");
-+    gBS->SetTimer (mPollEvent, TimerPeriodic, EFI_TIMER_PERIOD_MILLISECONDS (FB_POLL_MS));
 +  }
++
++  //
++  // Re-arm the periodic poll in both outcomes. Cancelling it is what lets this
++  // loop pump FbPoll by hand without re-entry, but leaving it cancelled makes
++  // the firmware deaf for the rest of the boot: "oem ramdisk" still answers,
++  // while "oem debuglog" returns nothing and the menu's DEBUG lines stay
++  // unreachable. The 43001198573 run showed exactly that: a successful publish
++  // followed by a 0-byte log.
++  //
++  gBS->SetTimer (mPollEvent, TimerPeriodic, EFI_TIMER_PERIOD_MILLISECONDS (FB_POLL_MS));
++  Print (L"fastboot: poll timer re-armed\n");
 +
 +  return mVolumeReady;
  }
