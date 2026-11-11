@@ -1,10 +1,23 @@
 diff --git a/DarwinBootPkg/Driver/DarwinBoot.c b/DarwinBootPkg/Driver/DarwinBoot.c
-index 3b6cafc..ffbbbbe 100644
+index 3b6cafc..3a7a23f 100644
 --- a/DarwinBootPkg/Driver/DarwinBoot.c
 +++ b/DarwinBootPkg/Driver/DarwinBoot.c
-@@ -603,7 +603,7 @@ Boot (
+@@ -602,8 +602,20 @@ Boot (
+ 
    (VOID)This;
    if ((Request == NULL) || (Request->Volume == NULL) || (Request->KernelPath == NULL)) { return EFI_INVALID_PARAMETER; }
++  //
++  // piano bring-up: state every input the guard below looks at, in the memory log.
++  // Print () only reaches ConOut and this board has no other channel.
++  //
++  DEBUG ((
++    DEBUG_ERROR,
++    "DARWINBOOT: request kexts=%u dt=%p/%u el=%u\n",
++    (UINT32)Request->KextCount,
++    Request->DeviceTree,
++    (UINT32)Request->DeviceTreeSize,
++    (UINT32)DarwinCurrentEl ()
++    ));
    if ((Request->KextCount != 0) || (Request->DeviceTree != NULL) || (Request->DeviceTreeSize != 0) ||
 -      (DarwinCurrentEl () != 4)) {
 +      ((DarwinCurrentEl () != 4) && (DarwinCurrentEl () != 8))) {
