@@ -1,0 +1,37 @@
+diff --git a/DarwinBootPkg/Driver/DarwinBoot.c b/DarwinBootPkg/Driver/DarwinBoot.c
+index 3b6cafc..ffbbbbe 100644
+--- a/DarwinBootPkg/Driver/DarwinBoot.c
++++ b/DarwinBootPkg/Driver/DarwinBoot.c
+@@ -603,7 +603,7 @@ Boot (
+   (VOID)This;
+   if ((Request == NULL) || (Request->Volume == NULL) || (Request->KernelPath == NULL)) { return EFI_INVALID_PARAMETER; }
+   if ((Request->KextCount != 0) || (Request->DeviceTree != NULL) || (Request->DeviceTreeSize != 0) ||
+-      (DarwinCurrentEl () != 4)) {
++      ((DarwinCurrentEl () != 4) && (DarwinCurrentEl () != 8))) {
+     Print (L"DARWINBOOT: unsupported inputs or exception level; firmware retained\n");
+     return EFI_UNSUPPORTED;
+   }
+diff --git a/DarwinBootPkg/Driver/Entry.S b/DarwinBootPkg/Driver/Entry.S
+index a7a55c2..53b552d 100644
+--- a/DarwinBootPkg/Driver/Entry.S
++++ b/DarwinBootPkg/Driver/Entry.S
+@@ -49,4 +49,19 @@ ASM_FUNC(DarwinEnter)
+   tlbi vmalle1
+   dsb sy
+   isb
++  //
++  // A firmware that runs at EL2 (Mu-Silicium configures HCR_EL2 and stays
++  // there) cannot simply branch into the kernel: XNU expects EL1. Switch only
++  // when needed, so an EL1 firmware keeps the old path.
++  //
++  mrs x9, CurrentEL
++  cmp x9, #8                     // EL2?
++  b.ne 4f
++  mov x9, #(1 << 31)             // HCR_EL2.RW = 1 -> AArch64 at EL1
++  msr hcr_el2, x9
++  mov x9, #0x3c5                 // SPSR_EL2: EL1h, DAIF masked
++  msr spsr_el2, x9
++  msr elr_el2, x1
++  eret
++4:
+   br x1

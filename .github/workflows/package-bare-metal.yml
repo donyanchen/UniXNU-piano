@@ -73,6 +73,20 @@ jobs:
           # move the highlight and the first press booted the first entry.
           git -C UniXNU apply "$PWD/device/patches/unixnu-menu-volume-keys.patch"
           grep -n 'SCAN_LEFT' UniXNU/package/UniXNUPkg/Library/UniXNULib/Menu.c
+          # The firmware runs at EL2 (Mu-Silicium configures HCR_EL2 and stays
+          # there), but DarwinBoot only accepted EL1 and branched straight into
+          # the kernel with `br x1`; XNU must start at EL1. The loader now takes
+          # EL2 as well and switches to EL1 (HCR_EL2.RW, SPSR_EL2/ELR_EL2, eret)
+          # right before entering the kernel.
+          git -C UniXNU/drivers/DarwinBoot apply "$PWD/device/patches/darwinboot-el1.patch"
+          grep -n 'EL2' UniXNU/drivers/DarwinBoot/DarwinBootPkg/Driver/Entry.S
+          # Payload volume: a 160 MiB FAT32 volume with 2 KiB clusters answers
+          # EFI_VOLUME_CORRUPTED when EnhancedFatDxe reads the 125 MB kernel out
+          # of it, and DarwinBoot reports the entry as "Volume Corrupt" on the
+          # device. 8 sectors per cluster makes mtools write FAT16, which reads
+          # back correctly.
+          git -C UniXNU apply "$PWD/device/patches/unixnu-payload-fat16.patch"
+          grep -n "'-c', '8'" UniXNU/scripts/unixnu/payload.py
           # piano has no serial console: make the menu state whether the payload
           # volume was published at all, so the next boot is diagnosable from the
           # screen alone.

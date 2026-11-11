@@ -1,0 +1,34 @@
+diff --git a/scripts/unixnu/payload.py b/scripts/unixnu/payload.py
+index 0774c8e..4b80b62 100644
+--- a/scripts/unixnu/payload.py
++++ b/scripts/unixnu/payload.py
+@@ -72,21 +72,28 @@ def check_native_root(kernel, arguments, vmm_present=False):
+     if not any(line.split()[-1:] == ['_sheng_pmgr_run'] for line in symbols.splitlines()):
+         raise Error('the native UFS root kernel lacks the linked sheng PMGR integration')
+ 
+ 
+ def write_volume(stage, image, label, size_mib):
+     for tool_name in ('mformat', 'mcopy'):
+         tool(tool_name, 'brew install mtools')
+     image.unlink(missing_ok=True)
+     env = dict(os.environ, MTOOLS_SKIP_CHECK='1', TZ='UTC')
+     sectors = size_mib * 2048
+-    run(['mformat', '-C', '-F', '-T', str(sectors), '-v', label, '-N', '53484e47', '-i', image, '::'], env=env, capture=True)
++    #
++    # Not FAT32 (-F): EnhancedFatDxe answers EFI_VOLUME_CORRUPTED when a 125 MB
++    # kernel is read back out of a 160 MiB FAT32 volume with 2 KiB clusters, and
++    # DarwinBoot then reports the XNU entry as "Volume Corrupt" on the device.
++    # 8 sectors per cluster (4 KiB) yields 40,915 clusters, which mtools only
++    # accepts as FAT16 - the shape that reads correctly on the same firmware.
++    #
++    run(['mformat', '-C', '-T', str(sectors), '-c', '8', '-v', label, '-N', '53484e47', '-i', image, '::'], env=env, capture=True)
+     for entry in sorted(stage.iterdir()):
+         run(['mcopy', '-i', image, '-s', '-Q', '-m', entry, '::/'], env=env, capture=True)
+ 
+ 
+ def skip_setup_seed(ctx, base, tool_path, tool_args=()):
+     """A copy of the Data seed whose preferences mark Setup (the Hello pages) as done; cached by the hash of the base and the
+     tool's extra arguments (board.toml [payload] skip_setup_args)."""
+     tool('hdiutil')
+     out = paths(ctx)[0]
+     out.mkdir(parents=True, exist_ok=True)
