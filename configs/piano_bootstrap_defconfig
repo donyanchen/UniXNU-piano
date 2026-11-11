@@ -28,7 +28,9 @@ CONFIG_XNU_NATIVE_RAM_BLOCK=y
 # OWNER_DATA_VOLUME_UUID is set from the actual RAM seed before the build.
 # CONFIG_XNU_OWNER_UNION_SYSTEMOS is not set
 # CONFIG_XNU_NATIVE_ADRENO is not set
-# CONFIG_XNU_NATIVE_LEGACY_DISPLAY is not set
+# GopFramebuffer ships NativeLegacyDisplay.cpp and the board passes
+# offline-legacy-gop=1, so the legacy GOP path has to be compiled in.
+CONFIG_XNU_NATIVE_LEGACY_DISPLAY=y
 # CONFIG_XNU_BOOT_PROGRESS is not set
 CONFIG_XNU_EARLY_BOOT_PROGRESS=y
 

@@ -138,7 +138,7 @@ index c349968..f5be452 100644
  
  //
  // Qualcomm's EFI_USB_DEVICE_PROTOCOL (QcomPkg EFIUsbDevice.h). Its header
-@@ -523,6 +528,151 @@ BootDownloaded (
+@@ -523,6 +528,176 @@ BootDownloaded (
    mUsb->Send (FB_EP_RX, FB_RX_SIZE, mRx);
  }
  
@@ -193,6 +193,8 @@ index c349968..f5be452 100644
 +  OUT VOID                   *Buffer
 +  )
 +{
++  UINTN  Available;
++
 +  if (Buffer == NULL) {
 +    return EFI_INVALID_PARAMETER;
 +  }
@@ -201,12 +203,20 @@ index c349968..f5be452 100644
 +    return EFI_MEDIA_CHANGED;
 +  }
 +
-+  if ((BufferSize % RAM_BLOCK_SIZE) != 0) {
-+    return EFI_BAD_BUFFER_SIZE;
++  if (Lba > mVolumeMedia.LastBlock) {
++    return EFI_INVALID_PARAMETER;
 +  }
 +
-+  if ((Lba > mVolumeMedia.LastBlock) || ((BufferSize / RAM_BLOCK_SIZE) > (mVolumeMedia.LastBlock + 1 - Lba))) {
-+    return EFI_INVALID_PARAMETER;
++  //
++  // A BlockIo consumer may issue a short tail read at the end of the medium.
++  // Serve the bytes that exist and zero the rest instead of refusing it: the
++  // FAT driver's last cluster read is not always a whole number of blocks.
++  //
++  Available = (UINTN)(mVolumeMedia.LastBlock + 1 - Lba) * RAM_BLOCK_SIZE;
++  if (BufferSize > Available) {
++    CopyMem (Buffer, mVolumeBase + Lba * RAM_BLOCK_SIZE, Available);
++    ZeroMem ((UINT8 *)Buffer + Available, BufferSize - Available);
++    return EFI_SUCCESS;
 +  }
 +
 +  CopyMem (Buffer, mVolumeBase + Lba * RAM_BLOCK_SIZE, BufferSize);
@@ -250,8 +260,23 @@ index c349968..f5be452 100644
 +    return EFI_NOT_FOUND;
 +  }
 +
-+  mVolumeBase   = (UINT8 *)mData;
-+  mVolumeBytes  = mDataSize;
++  //
++  // mData is the live download buffer: a later download:/oem command calls
++  // DataReserve (), which may free or overwrite it, and the FAT driver that
++  // mounted this volume would then read different bytes or a dangling range.
++  // Keep our own copy, and refuse a second publication.
++  //
++  if (mVolumeBase != NULL) {
++    return EFI_ALREADY_STARTED;
++  }
++
++  mVolumeBase = AllocatePool (mDataSize);
++  if (mVolumeBase == NULL) {
++    return EFI_OUT_OF_RESOURCES;
++  }
++
++  CopyMem (mVolumeBase, mData, mDataSize);
++  mVolumeBytes = mDataSize;
 +
 +  ZeroMem (&mVolumeMedia, sizeof (mVolumeMedia));
 +  mVolumeMedia.MediaId          = 1;
