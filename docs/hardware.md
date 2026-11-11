@@ -80,3 +80,56 @@ h/v porch、DSI lane 数、DSC 参数属于面板驱动的**内部时序表**，
 | 充电 | I2C `3-006a` | `sc8541_master` |
 | 无线充 | I2C `9-0038` | `sc96231-wireless-ch` |
 | USB Type-C | I2C `2-0042` | `fsa4480-i2c` |
+
+## QUP 串行引擎（SPI / I2C）
+
+这些值用于在没有固件协助时自己驱动 SE：先对时钟分支的投票位写 1，
+再轮询 CBCR 的 bit31 直到清零，然后才能访问 SE 的寄存器窗口。
+
+| 项 | SE2（触摸，SPI） | SE6（键盘盖，I2C） |
+| --- | --- | --- |
+| SE 物理基址 | `0xa88000` + `0x4000` | `0xa98000` + `0x4000` |
+| QUP1 wrapper | `geniqup@ac0000` | 同左 |
+| 分支时钟 | `gcc_qupv3_wrap1_s2_clk` | `gcc_qupv3_wrap1_s6_clk` |
+| enable_reg / bit | `0x52008` / 24 | `0x52008` / 28 |
+| halt_reg（bit31 = off） | `0x1827c` | `0x18644` |
+| 时钟源 | RO 分频 `0x1828c` bits[3:0]，父 RCG `0x188c0` | 独立 RCG，`cmd_rcgr 0x18654` |
+| 来源 | `gcc-sm8750.c:2129`、`:1192` | `gcc-sm8750.c:809` |
+
+QUP1 wrapper 级时钟（两个 SE 都要先开）：
+
+| 时钟 | enable_reg / bit | halt_reg |
+| --- | --- | --- |
+| `gcc_qupv3_wrap1_core_2x_clk` | `0x52008` / 18 | `0x2315c` |
+| `gcc_qupv3_wrap1_core_clk` | `0x52008` / 19 | `0x23148` |
+| `gcc_qupv3_wrap_1_m_ahb_clk` | `0x52008` / 20 | `0x23140` |
+| `gcc_qupv3_wrap_1_s_ahb_clk` | `0x52008` / 21 | `0x23144` |
+| `gcc_gpll0` | `0x52020` / 0 | — |
+
+GCC 基址 `0x00100000`。TLMM 基址 `0xf000000`，每引脚 `0x1000` 步进
+（`ctl` 在 `+0x0`，`io` 在 `+0x4`）。引脚 mux 值写 **1** 即选中 `qup1_seN_lX`。
+
+## 键盘盖（磁吸触点）
+
+| 项 | 值 | 来源 |
+| --- | --- | --- |
+| MCU | **Nanosic 803**，compatible `nanosic,803` | `soc/i2c@a98000/nanosic@4c` |
+| 总线 | I2C QUP1 **SE6**，`0xa98000` | 同上 |
+| 从机地址 | `0x4c` | `reg = <0x4c>` |
+| 总线频率 | **1 MHz**（`0xf4240`） | `qcom,clk-freq-out` |
+| SDA / SCL | GPIO **56** / **57**（`qup1_se6_l0/l1`） | `mi_qupv3_se6_i2c_pins` |
+| 中断 | GPIO **97**，上升沿（`<&tlmm 97 0x2001>`） | `irq_pin` |
+| reset | GPIO **188** | `reset_pin` |
+| status | GPIO **95** | `status_pin` |
+| sleep | GPIO **3** | `sleep_pin` |
+| 供电 | `vdd` + `dvdd` | `nanosic,vdd-name` / `dvdd-name` |
+| 触摸板型号 | `nanosic-pid-1260`、`nanosic-pid-1294` | `touchpad-configs` |
+| 触摸板边缘区 | x `0x140`/`0xb3f`，y `0x1ab`/`0x6ac` | 同上 |
+
+键盘盖同时提供键盘和触摸板；触摸板带边缘区、单/双/三指手势阈值。
+
+**UEFI 侧现状**：`uefi/pianoPkg/Include/DXE.inc` 已包含
+`Binaries/piano/QcomPkg/Drivers/I2C/I2C.inf` 与
+`MdeModulePkg/Bus/Usb/UsbKbDxe`，但没有认识 Nanosic 803 的 DXE 驱动，
+所以菜单和 Shell 都收不到键盘输入。UEFI 的 OTG 口要留给主机做
+fastboot 诊断，不能指望外接 USB 键盘。
