@@ -80,7 +80,7 @@ index 9155161..f2ab41c 100644
  }
  
  STATIC
-@@ -149,6 +162,18 @@ DeviceBootManagerAfterConsole ()
+@@ -149,6 +162,23 @@ DeviceBootManagerAfterConsole ()
    PianoResetHookInstall ();
    PianoDtbInstall ();
    PianoFastbootStart ();
@@ -88,7 +88,12 @@ index 9155161..f2ab41c 100644
 +  // A vendor ABL refuses the 160 MiB payload ramdisk, so the host hands the
 +  // payload over USB instead. Hold the menu back until it arrives: the menu
 +  // scans the volumes once and would not see a volume published later.
-+  PianoFastbootWaitPayload (20000);
++  //
++  // Three minutes, not twenty seconds: the host has to notice the firmware's
++  // re-enumerated fastboot device, stage 160 MiB and publish it, and on this
++  // board the USB device leaves the bus shortly after the menu appears. A
++  // twenty-second window made every attempt a race with the enumeration.
++  PianoFastbootWaitPayload (180000);
 +
 +  // UniXNU owns the boot menu when the board builds it into the volume: it
 +  // publishes the payload volume, offers its entries and starts XNU. It only
