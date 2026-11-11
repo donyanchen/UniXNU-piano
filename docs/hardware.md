@@ -133,3 +133,57 @@ GCC 基址 `0x00100000`。TLMM 基址 `0xf000000`，每引脚 `0x1000` 步进
 `MdeModulePkg/Bus/Usb/UsbKbDxe`，但没有认识 Nanosic 803 的 DXE 驱动，
 所以菜单和 Shell 都收不到键盘输入。UEFI 的 OTG 口要留给主机做
 fastboot 诊断，不能指望外接 USB 键盘。
+
+## UFS 移植常量（SM8750，供 ShengUfs 移植用）
+
+上游 `ShengUfs` 组件声明 `hardware = ["SM8550 UFS controller"]`、
+`board_dependencies = ["SM8550 clocks and SMMU"]`，`NativeUfs.cpp` 只在匹配
+`compatible` 时读设备树，时钟 / SMMU / PHY 全是编译期常量。所以要支持 piano，
+必须替换这些常量，补 DTS 节点没有用。
+
+### GCC 时钟分支（基址 `0x100000`，全部 `BIT(0)`，`enable_reg == halt_reg`）
+
+| 标识 | 寄存器 | 备注 |
+| --- | --- | --- |
+| `gcc_aggre_ufs_phy_axi_clk` | `0x770f0` | |
+| `gcc_ufs_phy_ahb_clk` | `0x77028` | SM8550 是 `0x77024` |
+| `gcc_ufs_phy_axi_clk` | `0x77018` | FORCE_MEM_CORE_ON，**不要轮询 halt** |
+| `gcc_ufs_phy_ice_core_clk` | `0x7707c` | SM8550 是 `0x77074`；同样不轮询 |
+| `gcc_ufs_phy_phy_aux_clk` | `0x770bc` | SM8550 是 `0x770b0` |
+| `gcc_ufs_phy_unipro_core_clk` | `0x7706c` | SM8550 是 `0x77068` |
+| `gcc_ufs_phy_tx_symbol_0_clk` | `0x7702c` | SM8550 是 `0x77028` |
+| `gcc_ufs_phy_rx_symbol_0_clk` | `0x77030` | SM8550 是 `0x7702c`（照抄会写到 tx） |
+| `gcc_ufs_phy_rx_symbol_1_clk` | `0x770d8` | |
+
+SM8750 **没有** SM8550 的四个 `*_hw_ctl_clk` 分支，照抄会写坏寄存器。
+也没有 GCC 侧的 UFS PLL —— PLL 在 QMP PHY 内部。
+
+### GDSC
+
+| 标识 | gdscr | poll | 位 |
+| --- | --- | --- | --- |
+| `gcc_ufs_mem_phy_gdsc` | `0x9e000` | `0x9e004` | PWR_ON 31、UP 16、DOWN 15 |
+| `gcc_ufs_phy_gdsc` | `0x77004` | `0x77008` | 同上，**另加 VOTABLE** |
+
+`ufs_phy_gdsc` 在 SM8750 上是 votable，要用 `SW_OVERRIDE`(bit2) 投票，
+不能只清 `SW_COLLAPSE`(bit0)。轮询完成位是 `bit16`，不是 `bit31`。
+
+### 复位 / PHY / SMMU
+
+- UFS 复位 `GCC_UFS_PHY_BCR` = `0x77000` bit0（主线上编号 21，下游 `0x17`，同一寄存器）
+- PHY 窗口 `0x1d80000`/`0x2000`；`start 0x400`、`power_down 0x404`、
+  `sw_reset 0x408`、`multi_lane_ctrl1 0x5fc=0x02`、`ready 0x5a8`。
+  SM8550 与 SM8750 共用 `qmp_ufs_offsets_v6`，**偏移不用改**，只换表内容。
+- APPS SMMU `0x15000000`：`sCR0 0x0`、`SMR 0x800+4n`、`S2CR 0xc00+4n`、
+  `CBAR 0x1000+4n`、`CBA2R 0x1800+4n`，context bank =
+  `(globalPages+n)*0x1000`。UFS 用 **stream 0x60**，Qualcomm 是 stream-matching，
+  SMR 槽位要扫描（`VALID && (ID & ~MASK) == 0x60`），不能假定下标。
+
+### 命令通道注意
+
+SM8750 下游 DTS 多出 `mcq_sqd`(`0x1da5000`)、`mcq_vs`(`0x1da4000`) 两个窗口，
+是老式 doorbell 驱动用不到的。但用 UTRLDBR 之前**必须**先读
+`REG_UFS_MEM_CFG (0x1d84300)` 的 `MCQ_MODE_SELECT` bit0 —— 如果固件把
+MCQ 打开了，SM8550 的 doorbell 序列会失效。
+
+中断：UFS 是 GIC SPI **265**（SM8550 是 261）。
