@@ -138,7 +138,7 @@ index c349968..f5be452 100644
  
  //
  // Qualcomm's EFI_USB_DEVICE_PROTOCOL (QcomPkg EFIUsbDevice.h). Its header
-@@ -523,6 +528,175 @@ BootDownloaded (
+@@ -523,6 +528,181 @@ BootDownloaded (
    mUsb->Send (FB_EP_RX, FB_RX_SIZE, mRx);
  }
  
@@ -157,10 +157,16 @@ index c349968..f5be452 100644
 +} RAM_VOLUME_DEVICE_PATH;
 +#pragma pack()
 +
++// A vendor device path of this volume's own. It must not repeat the one in
++// UniXNURamDiskDxe: that driver already installed a path with the
++// A9C6827C-1BD8-410C-885A-C46500F7D836 node while publishing the stale Android
++// initrd, and InstallMultipleProtocolInterfaces refuses a device path that is
++// already in the handle database with EFI_ALREADY_STARTED, which is why
++// "oem ramdisk" reported "cannot publish the payload".
 +STATIC RAM_VOLUME_DEVICE_PATH  mVolumePath = {
 +  {
 +    { HARDWARE_DEVICE_PATH, HW_VENDOR_DP, { (UINT8)sizeof (VENDOR_DEVICE_PATH), (UINT8)(sizeof (VENDOR_DEVICE_PATH) >> 8) } },
-+    { 0xA9C6827C, 0x1BD8, 0x410C, { 0x88, 0x5A, 0xC4, 0x65, 0x00, 0xF7, 0xD8, 0x36 } }
++    { 0x3E7B9C41, 0x8D52, 0x4A6F, { 0xB1, 0xC7, 0x2A, 0x5E, 0x9D, 0x43, 0x08, 0xBF } }
 +  },
 +  { END_DEVICE_PATH_TYPE, END_ENTIRE_DEVICE_PATH_SUBTYPE, { sizeof (EFI_DEVICE_PATH_PROTOCOL), 0 } }
 +};
