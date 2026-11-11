@@ -17,7 +17,7 @@ run kernel ./unixnu build kernel -D ../device -j $JOBS
 run package ./unixnu build package -D ../device
 run firmware ./unixnu build firmware -D ../device --uefi ../uefi/deps/Mu-Silicium
 run payload ./unixnu build payload -D ../device
-run bootimg ./unixnu bootimg -D ../device
+run bootimg ./unixnu bootimg -D ../device --uefi ../uefi/deps/Mu-Silicium --dtb out/piano/ipados-17.7.11-21H461/piano/device-tree/hardware.dtb --ramdisk none
 mkdir -p ../out
 find out/piano -type f \( -name '*.img' -o -name 'kernel.macho*' -o -name '*.efi' \) -exec cp -v {} ../out/ \; || true
 tar czf ../out/logs.tar.gz out/piano/*/*/logs 2>/dev/null || true
