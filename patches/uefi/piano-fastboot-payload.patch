@@ -138,7 +138,7 @@ index c349968..f5be452 100644
  
  //
  // Qualcomm's EFI_USB_DEVICE_PROTOCOL (QcomPkg EFIUsbDevice.h). Its header
-@@ -523,6 +528,176 @@ BootDownloaded (
+@@ -523,6 +528,175 @@ BootDownloaded (
    mUsb->Send (FB_EP_RX, FB_RX_SIZE, mRx);
  }
  
@@ -256,26 +256,25 @@ index c349968..f5be452 100644
 +  EFI_STATUS  Status;
 +  EFI_HANDLE  Handle;
 +
++  DEBUG ((DEBUG_INFO, "fastboot: publish mData=%p size=0x%x ready=%u\n", mData, (UINT32)mDataSize, (UINT32)mVolumeReady));
++
 +  if ((mData == NULL) || (mDataSize < RAM_BLOCK_SIZE)) {
 +    return EFI_NOT_FOUND;
 +  }
 +
 +  //
-+  // mData is the live download buffer: a later download:/oem command calls
-+  // DataReserve (), which may free or overwrite it, and the FAT driver that
-+  // mounted this volume would then read different bytes or a dangling range.
-+  // Keep our own copy, and refuse a second publication.
++  // mData is the transfer buffer the stage filled. It stays valid until the
++  // next DataReserve (), which only a further download:/oem upload triggers,
++  // and the menu reads the volume moments from now. Do not copy it: a 160 MiB
++  // AllocatePool () returns out of resources here and the publication never
++  // happens. Refuse a second publication instead, so one buffer cannot be
++  // handed to the FAT driver twice.
 +  //
-+  if (mVolumeBase != NULL) {
++  if (mVolumeReady) {
 +    return EFI_ALREADY_STARTED;
 +  }
 +
-+  mVolumeBase = AllocatePool (mDataSize);
-+  if (mVolumeBase == NULL) {
-+    return EFI_OUT_OF_RESOURCES;
-+  }
-+
-+  CopyMem (mVolumeBase, mData, mDataSize);
++  mVolumeBase  = (UINT8 *)mData;
 +  mVolumeBytes = mDataSize;
 +
 +  ZeroMem (&mVolumeMedia, sizeof (mVolumeMedia));
@@ -315,7 +314,7 @@ index c349968..f5be452 100644
  STATIC
  VOID
  FbCommand (
-@@ -570,6 +720,18 @@ FbCommand (
+@@ -570,6 +720,25 @@ FbCommand (
      StageDebugLog ();
    } else if (AsciiStrCmp (Cmd, "oem screenshot") == 0) {
      StageScreenshot ();
@@ -325,9 +324,16 @@ index c349968..f5be452 100644
 +      return;
 +    }
 +
-+    if (EFI_ERROR (PublishVolume ())) {
-+      FbFail ("cannot publish the payload");
-+      return;
++    {
++      EFI_STATUS  Publish;
++
++      Publish = PublishVolume ();
++      if (EFI_ERROR (Publish)) {
++        DEBUG ((DEBUG_ERROR, "fastboot: publish failed %r\n", Publish));
++        Print (L"fastboot: publish failed (%r)\n", Publish);
++        FbFail ("cannot publish the payload");
++        return;
++      }
 +    }
 +
 +    FbReply ("OKAY", "", FbNextCommand);
