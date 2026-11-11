@@ -1,3 +1,17 @@
+diff --git a/DarwinBootPkg/Driver/BootVideo.h b/DarwinBootPkg/Driver/BootVideo.h
+index 2bbb634..e6ff1a6 100644
+--- a/DarwinBootPkg/Driver/BootVideo.h
++++ b/DarwinBootPkg/Driver/BootVideo.h
+@@ -18,7 +18,8 @@ DarwinBootVideoFromGop (CONST EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, UINT64 Video[6]
+   if ((Gop->Mode == NULL) || (Gop->Mode->Info == NULL) ||
+       (Gop->Mode->SizeOfInfo < sizeof (*Info))) { return EFI_COMPROMISED_DATA; }
+   Info = Gop->Mode->Info;
+-  if (Info->PixelFormat != PixelBlueGreenRedReserved8BitPerColor) { return EFI_UNSUPPORTED; }
++  if ((Info->PixelFormat != PixelBlueGreenRedReserved8BitPerColor) &&
++      (Info->PixelFormat != PixelRedGreenBlueReserved8BitPerColor)) { return EFI_UNSUPPORTED; }
+   RowBytes = (UINT64)Info->PixelsPerScanLine * 4;
+   if ((Info->HorizontalResolution == 0) || (Info->VerticalResolution == 0) ||
+       (Info->PixelsPerScanLine < Info->HorizontalResolution) ||
 diff --git a/DarwinBootPkg/Driver/DarwinBoot.c b/DarwinBootPkg/Driver/DarwinBoot.c
 index 3b6cafc..3a7a23f 100644
 --- a/DarwinBootPkg/Driver/DarwinBoot.c
