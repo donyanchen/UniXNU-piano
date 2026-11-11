@@ -38,7 +38,7 @@ limits = ["No firmware image has been booted on the device yet; the GOP handover
 next_action = ["Boot the firmware and capture its serial output before claiming the UEFI stage."]
 evidence = [
   { kind = "source", reference = "patches/uefi/piano-fastboot-payload.patch", result = "reports the USB device protocol lookup and StartEx result on the console, each held for two seconds, so the piano-uefi fastboot bring-up can be diagnosed without a serial port" },
-  { kind = "source", reference = "patches/uefi/piano-start-unixnu.patch", result = "starts UniXNU.efi from the firmware volume before the ESP loader and AndroidBoot fallbacks, and loads it with GetSectionFromAnyFv plus LoadImage/StartImage instead of a device path built from the BDS loaded image, printing each outcome on the console; the patch names uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c because the UEFI repository carries its own uefi/ directory and prep applies it from the workspace root" },
+  { kind = "source", reference = "patches/uefi/piano-fastboot-payload.patch", result = "starts UniXNU.efi from the firmware volume before the ESP loader and AndroidBoot fallbacks (loading it with GetSectionFromAnyFv plus LoadImage/StartImage rather than a device path built from the BDS loaded image), and carries the payload over USB instead of the boot image ramdisk: FB_MAX_DOWNLOAD rises to 256 MiB, oem ramdisk publishes the staged bytes as a read-only BlockIo volume, and the boot manager waits up to 20 s for it before UniXNU scans the volumes" },
   { kind = "source", reference = "patches/uefi/piano-dsc-unixnulib.patch", result = "adds the UniXNULib LibraryClasses mapping that fixes the error 4000 firmware build failure" },
 ]
 
