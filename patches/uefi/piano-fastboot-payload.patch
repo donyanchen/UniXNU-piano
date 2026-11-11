@@ -114,10 +114,19 @@ index fb04f58..d90c151 100644
 +
  #endif
 diff --git a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
-index c349968..a94652b 100644
+index c349968..f5be452 100644
 --- a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
 +++ b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
-@@ -41,7 +41,10 @@
+@@ -20,6 +20,8 @@
+   SPDX-License-Identifier: BSD-2-Clause-Patent
+ **/
+ #include <Uefi.h>
++#include <Protocol/BlockIo.h>
++#include <Protocol/DevicePath.h>
+ #include <Protocol/GraphicsOutput.h>
+ #include <Protocol/UsbIo.h>
+ #include <Library/BaseLib.h>
+@@ -41,7 +43,10 @@
  #define FB_POLL_MS   5
  #define FB_CHUNK     SIZE_1MB
  #define FB_LOG_SIZE  SIZE_256KB
@@ -129,7 +138,7 @@ index c349968..a94652b 100644
  
  //
  // Qualcomm's EFI_USB_DEVICE_PROTOCOL (QcomPkg EFIUsbDevice.h). Its header
-@@ -523,6 +526,151 @@ BootDownloaded (
+@@ -523,6 +528,151 @@ BootDownloaded (
    mUsb->Send (FB_EP_RX, FB_RX_SIZE, mRx);
  }
  
@@ -281,7 +290,7 @@ index c349968..a94652b 100644
  STATIC
  VOID
  FbCommand (
-@@ -570,6 +718,18 @@ FbCommand (
+@@ -570,6 +720,18 @@ FbCommand (
      StageDebugLog ();
    } else if (AsciiStrCmp (Cmd, "oem screenshot") == 0) {
      StageScreenshot ();
@@ -300,7 +309,7 @@ index c349968..a94652b 100644
    } else if (AsciiStrCmp (Cmd, "boot") == 0) {
      if (mDataSize == 0) {
        FbFail ("nothing downloaded");
-@@ -715,6 +875,7 @@ PianoFastbootStart (
+@@ -715,6 +877,7 @@ PianoFastbootStart (
  {
    EFI_STATUS  Status;
    EFI_EVENT   InitEvent;
@@ -308,7 +317,7 @@ index c349968..a94652b 100644
  
    LogStart ();
  
-@@ -724,9 +885,48 @@ PianoFastbootStart (
+@@ -724,9 +887,48 @@ PianoFastbootStart (
      gBS->CloseEvent (InitEvent);
    }
  
@@ -359,7 +368,7 @@ index c349968..a94652b 100644
    }
  
    if (!EFI_ERROR (Status)) {
-@@ -747,9 +947,42 @@ PianoFastbootStart (
+@@ -747,9 +949,42 @@ PianoFastbootStart (
  
    if (EFI_ERROR (Status)) {
      Print (L"fastboot: not started (%r)\n", Status);
