@@ -68,33 +68,9 @@ jobs:
           ls -l parts
       - uses: actions/upload-artifact@v4
         with:
-          name: root-part-0
-          path: parts/root.part.0
+          name: root-parts
+          path: parts/root.part.*
           compression-level: 0
-      - uses: actions/upload-artifact@v4
-        with:
-          name: root-part-1
-          path: parts/root.part.1
-          compression-level: 0
-      - uses: actions/upload-artifact@v4
-        with:
-          name: root-part-2
-          path: parts/root.part.2
-          compression-level: 0
-      - uses: actions/upload-artifact@v4
-        with:
-          name: root-part-3
-          path: parts/root.part.3
-          compression-level: 0
-      - uses: actions/upload-artifact@v4
-        with:
-          name: root-part-4
-          path: parts/root.part.4
-          compression-level: 0
-      - uses: actions/upload-artifact@v4
-        with:
-          name: root-part-5
-          path: parts/root.part.5
-          compression-level: 0
+          if-no-files-found: error
       - name: manifest summary
         run: cat UniXNU/out/userdata-root.json | head -40
