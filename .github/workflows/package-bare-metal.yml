@@ -204,7 +204,8 @@ jobs:
       - name: payload
         working-directory: UniXNU
         run: |
-          ./unixnu build payload -D ../device > /tmp/s8.log 2>&1 || { tail -50 /tmp/s8.log | sed 's/^/::error::/'; exit 1; }
+          # panic_screen needs Mu-Silicium's FrameBufferSerialPortLib/Font.h.
+          ./unixnu build payload -D ../device --uefi ../uefi/deps/Mu-Silicium > /tmp/s8.log 2>&1 || { tail -50 /tmp/s8.log | sed 's/^/::error::/'; exit 1; }
           tail -15 /tmp/s8.log
       - name: bootimg
         working-directory: UniXNU
