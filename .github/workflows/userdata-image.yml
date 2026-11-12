@@ -1,0 +1,98 @@
+name: userdata image
+
+# Builds the raw iPadOS root image (SHNGROOT manifest + the IPSW's OS and
+# SystemOS disk images) that the native UFS driver reads. The image is split
+# into ~1.9 GiB parts so each one fits an artifact; the host joins them and
+# writes the result into /data, then boots with native-ufs-window-lba/-blocks
+# pointing at the file's physical run.
+
+on:
+  workflow_dispatch:
+    inputs:
+      os:
+        type: choice
+        options: ["17", "26", "27"]
+        default: "17"
+      jobs:
+        default: "4"
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: macos-26
+    timeout-minutes: 300
+    env:
+      UNIXNU_UNIQUE_CHIP_ID: "0x0123456789abcdef"
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: device
+          submodules: recursive
+      - uses: actions/checkout@v4
+        with:
+          repository: UniXNU/UniXNU
+          ref: 95ad78129203442c3c14c02336303adbddf8d0a3
+          path: UniXNU
+          fetch-depth: 1
+      - name: tools
+        run: |
+          brew install dtc llvm lld cmake mtools openssl@3 blacktop/tap/ipsw
+          echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
+          echo "/opt/homebrew/opt/lld/bin" >> $GITHUB_PATH
+      - name: fetch
+        working-directory: UniXNU
+        run: |
+          cat > unixnu.local.toml <<EOF
+          [build]
+          device = "../device"
+          jobs = ${{ inputs.jobs }}
+          target = "DEBUG"
+          EOF
+          ./unixnu fetch > /tmp/f.log 2>&1 || { tail -40 /tmp/f.log | sed 's/^/::error::/'; exit 1; }
+          tail -15 /tmp/f.log
+      - name: userdata
+        working-directory: UniXNU
+        run: |
+          ./unixnu userdata -D ../device > /tmp/u.log 2>&1 || { tail -60 /tmp/u.log | sed 's/^/::error::/'; exit 1; }
+          tail -25 /tmp/u.log
+          ls -l out/userdata-root.img out/userdata-root.json
+      - name: split
+        run: |
+          mkdir -p parts
+          split -b 1900m -d -a 1 UniXNU/out/userdata-root.img parts/root.part.
+          ls -l parts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: root-part-0
+          path: parts/root.part.0
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: root-part-1
+          path: parts/root.part.1
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: root-part-2
+          path: parts/root.part.2
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: root-part-3
+          path: parts/root.part.3
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: root-part-4
+          path: parts/root.part.4
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: root-part-5
+          path: parts/root.part.5
+          compression-level: 0
+      - name: manifest summary
+        run: cat UniXNU/out/userdata-root.json | head -40
