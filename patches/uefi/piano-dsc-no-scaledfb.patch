@@ -1,0 +1,22 @@
+diff --git a/uefi/uefi/pianoPkg/piano.dsc b/uefi/uefi/pianoPkg/piano.dsc
+index 57da3b9..7de0e0e 100644
+--- a/uefi/uefi/pianoPkg/piano.dsc
++++ b/uefi/uefi/pianoPkg/piano.dsc
+@@ -151,9 +151,14 @@
+   SiliciumPkg/Drivers/KeypadDeviceDxe/KeypadDeviceDxe.inf
+ 
+   #
+-  # Console at half resolution with 2x2 pixels, so text is readable
+-  #
+-  pianoPkg/Drivers/ScaledFbDxe/ScaledFbDxe.inf
++  # ScaledFbDxe is deliberately not built. It publishes a 1600x1068
++  # PixelBltOnly GOP whose FrameBufferBase is 0, and DarwinBoot has to hand
++  # XNU a linear framebuffer: the driver answered EFI_UNSUPPORTED and the
++  # kernel was never entered. Without it the SimpleFb GOP exposes the panel's
++  # native 3200x2136 32-bit buffer, which DarwinBoot accepts. The UEFI text
++  # console is smaller as a result; that is the trade.
++  #
++  # pianoPkg/Drivers/ScaledFbDxe/ScaledFbDxe.inf
+ 
+   #
+   # Android from Visor without a restart; copied to the ESP by make-esp.sh
