@@ -149,6 +149,10 @@ jobs:
           # instead of the SM8550 copy ShengUfs ships, then adapt the takeover
           # to this board's handoff state.
           python3 ../device/scripts/prepare-shengufs-smmu-upstream.py out
+          # Window mode: let the root manifest live in any contiguous block run
+          # (native-ufs-window-lba/-blocks), so the iPadOS image can sit in a
+          # pinned file inside /data instead of overwriting the partition start.
+          python3 ../device/scripts/prepare-shengufs-root-window.py out
           for h in $(find out -path '*ShengUfs*' -name SmmuTakeover.h); do
             grep -n 'kUfsSmmuMapBytes = 0x100000' "$h" | head -2
             grep -n 'mask == 0' "$h" | head -2
