@@ -150,9 +150,12 @@ jobs:
           # mapping". Take the exclusive entry over the way arm_smmu_write_sme
           # does (SMR off, S2CR, SMR on) instead of insisting on an empty slot.
           python3 ../device/scripts/prepare-shengufs-smmu-takeover.py out
-          for h in $(find out -name SmmuTakeover.h); do
+          # Only the ShengUfs copy is compiled here; out/feeds also carries the
+          # SM8750 platform kit's refactored copy, which takes the window as a
+          # parameter and must not be grepped for this constant.
+          for h in $(find out -path '*ShengUfs*' -name SmmuTakeover.h); do
             grep -n 'SMR off' "$h" | head -2
-            grep -c '0x200000' "$h"
+            grep -n '0x200000' "$h" | head -2
           done
       - name: policies
         working-directory: UniXNU
