@@ -1,0 +1,134 @@
+diff --git a/uefi/uefi/pianoPkg/Drivers/ScaledFbDxe/ScaledFb.c b/uefi/uefi/pianoPkg/Drivers/ScaledFbDxe/ScaledFb.c
+index e561370..bf6ab82 100644
+--- a/uefi/uefi/pianoPkg/Drivers/ScaledFbDxe/ScaledFb.c
++++ b/uefi/uefi/pianoPkg/Drivers/ScaledFbDxe/ScaledFb.c
+@@ -31,6 +31,75 @@ STATIC EFI_GRAPHICS_OUTPUT_MODE_INFORMATION  mInfo;
+ STATIC EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE     mMode;
+ STATIC FRAME_BUFFER_CONFIGURE                *mBltConfig;
+ 
++//
++// A second GOP over the panel's own buffer. The scaled one above is BltOnly on
++// purpose (its shadow is not the panel), but DarwinBoot has to hand XNU a
++// framebuffer address, and with only the BltOnly instance available the kernel
++// came up with video base 0. This one is linear and read/write.
++//
++STATIC EFI_GRAPHICS_OUTPUT_MODE_INFORMATION   mLinearInfo;
++STATIC EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE      mLinearMode;
++
++STATIC
++EFI_STATUS
++EFIAPI
++LinearQueryMode (
++  IN  EFI_GRAPHICS_OUTPUT_PROTOCOL          *This,
++  IN  UINT32                                ModeNumber,
++  OUT UINTN                                 *SizeOfInfo,
++  OUT EFI_GRAPHICS_OUTPUT_MODE_INFORMATION  **Info
++  )
++{
++  if ((ModeNumber != 0) || (SizeOfInfo == NULL) || (Info == NULL)) {
++    return EFI_UNSUPPORTED;
++  }
++
++  *Info = AllocateCopyPool (sizeof (mLinearInfo), &mLinearInfo);
++  if (*Info == NULL) {
++    return EFI_OUT_OF_RESOURCES;
++  }
++
++  *SizeOfInfo = sizeof (mLinearInfo);
++  return EFI_SUCCESS;
++}
++
++STATIC
++EFI_STATUS
++EFIAPI
++LinearSetMode (
++  IN EFI_GRAPHICS_OUTPUT_PROTOCOL  *This,
++  IN UINT32                        ModeNumber
++  )
++{
++  return (ModeNumber == 0) ? EFI_SUCCESS : EFI_UNSUPPORTED;
++}
++
++STATIC
++EFI_STATUS
++EFIAPI
++LinearBlt (
++  IN EFI_GRAPHICS_OUTPUT_PROTOCOL       *This,
++  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL      *BltBuffer OPTIONAL,
++  IN EFI_GRAPHICS_OUTPUT_BLT_OPERATION  BltOperation,
++  IN UINTN                              SourceX,
++  IN UINTN                              SourceY,
++  IN UINTN                              DestinationX,
++  IN UINTN                              DestinationY,
++  IN UINTN                              Width,
++  IN UINTN                              Height,
++  IN UINTN                              Delta
++  )
++{
++  return EFI_UNSUPPORTED;
++}
++
++STATIC EFI_GRAPHICS_OUTPUT_PROTOCOL mLinearGop = {
++  LinearQueryMode,
++  LinearSetMode,
++  LinearBlt,
++  &mLinearMode
++};
++
+ /*
+   Copy a shadow rectangle to the panel, each pixel as a 2x2 block. Both
+   panel rows are written from the shadow with one 64-bit store per pixel;
+@@ -162,6 +231,7 @@ ScaledFbInitialize (
+   EFI_MEMORY_REGION_DESCRIPTOR  Region;
+   UINTN                                 ConfigSize;
+   EFI_STATUS                            Status;
++  EFI_HANDLE                            LinearHandle;
+   EFI_GRAPHICS_OUTPUT_MODE_INFORMATION  ShadowInfo;
+ 
+   ZeroMem (&Region, sizeof (Region));
+@@ -211,7 +281,7 @@ ScaledFbInitialize (
+     return Status;
+   }
+ 
+-  return gBS->InstallMultipleProtocolInterfaces (
++  Status = gBS->InstallMultipleProtocolInterfaces (
+                 &ImageHandle,
+                 &gEfiDevicePathProtocolGuid,
+                 &DisplayDevicePath,
+@@ -219,4 +289,36 @@ ScaledFbInitialize (
+                 &mGop,
+                 NULL
+                 );
++  if (EFI_ERROR (Status)) {
++    return Status;
++  }
++
++  //
++  // Publish the panel buffer a second time, linearly. BltOnly keeps apps from
++  // drawing into the shadow, but a kernel needs an address it can write to.
++  //
++  mLinearInfo.Version              = 0;
++  mLinearInfo.HorizontalResolution = mPanelWidth;
++  mLinearInfo.VerticalResolution   = FixedPcdGet32 (PcdFrameBufferHeight);
++  mLinearInfo.PixelFormat          = PixelBlueGreenRedReserved8BitPerColor;
++  mLinearInfo.PixelsPerScanLine    = mPanelWidth;
++
++  mLinearMode.MaxMode         = 1;
++  mLinearMode.Mode            = 0;
++  mLinearMode.Info            = &mLinearInfo;
++  mLinearMode.SizeOfInfo      = sizeof (mLinearInfo);
++  mLinearMode.FrameBufferBase = (EFI_PHYSICAL_ADDRESS)(UINTN)mPanel;
++  mLinearMode.FrameBufferSize = (UINTN)mPanelWidth * mLinearInfo.VerticalResolution * sizeof (UINT32);
++
++  LinearHandle = NULL;
++  Status = gBS->InstallMultipleProtocolInterfaces (
++                &LinearHandle,
++                &gEfiGraphicsOutputProtocolGuid,
++                &mLinearGop,
++                NULL
++                );
++  DEBUG ((DEBUG_ERROR, "ScaledFb: linear GOP base 0x%lx %lux%lu (%r)\n",
++          (UINT64)mLinearMode.FrameBufferBase, mLinearInfo.HorizontalResolution,
++          mLinearInfo.VerticalResolution, Status));
++  return Status;
+ }
