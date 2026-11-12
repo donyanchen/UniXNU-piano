@@ -152,6 +152,7 @@ jobs:
           python3 ../device/scripts/prepare-shengufs-smmu-takeover.py out
           for h in $(find out -name SmmuTakeover.h); do
             grep -n 'SMR off' "$h" | head -2
+            grep -c '0x200000' "$h"
           done
       - name: policies
         working-directory: UniXNU
