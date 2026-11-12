@@ -78,6 +78,8 @@ jobs:
           # now takes EL2 too and switches down (HCR_EL2.RW, SPSR_EL2/ELR_EL2).
           git -C UniXNU submodule update --init --depth 1 drivers/DarwinBoot
           git -C UniXNU/drivers/DarwinBoot apply "$PWD/device/patches/darwinboot-el1.patch"
+          git -C UniXNU/drivers/DarwinBoot apply "$PWD/device/patches/darwinboot-gop.patch"
+          grep -n "video from handle" UniXNU/drivers/DarwinBoot/DarwinBootPkg/Driver/DarwinBoot.c
           grep -n 'EL2' UniXNU/drivers/DarwinBoot/DarwinBootPkg/Driver/Entry.S
           # A 160 MiB FAT32 volume with 2 KiB clusters answers
           # EFI_VOLUME_CORRUPTED when EnhancedFatDxe reads the 125 MB kernel.
