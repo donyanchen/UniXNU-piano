@@ -94,8 +94,7 @@ static int mapper_is_userdata(const char *mapper, dev_t backing, uint64_t bytes)
     // mapper is exactly as large as it. A non-zero offset could not fit, so the
     // mapping is full-length and zero-offset.
     if (rc && errno == EINVAL) {
-        if (getenv("PARK_DEBUG")) fprintf(stderr, "dm: table ioctl EINVAL, using sysfs+sizes
-");
+        if (getenv("PARK_DEBUG")) fputs("dm: table ioctl EINVAL, using sysfs+sizes\n", stderr);
         close(control);
         return 1;
     }
