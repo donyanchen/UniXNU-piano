@@ -20,10 +20,13 @@ jobs:
         run: |
           aarch64-linux-gnu-gcc -O2 -static -s -Wall -Wextra \
             -o piano-park tools/ufspark/piano-esp.c
-          file piano-park
-          ls -l piano-park
+          aarch64-linux-gnu-gcc -O2 -static -s -Wall -Wextra             -o piano-resize-f2fs tools/ufspark/piano-resize-f2fs.c
+          file piano-park piano-resize-f2fs
+          ls -l piano-park piano-resize-f2fs
       - uses: actions/upload-artifact@v4
         with:
           name: piano-park
-          path: piano-park
+          path: |
+            piano-park
+            piano-resize-f2fs
           if-no-files-found: error
