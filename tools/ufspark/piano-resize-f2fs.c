@@ -89,12 +89,10 @@ static int mapper_is_userdata(const char *mapper, dev_t backing, uint64_t bytes)
     int valid = 0;
     int rc = ioctl(control, DM_TABLE_STATUS, query);
     if (getenv("PARK_DEBUG")) {
-        fprintf(stderr, "dm: ioctl=%d errno=%d targets=%u dstart=%u
-", rc, errno, query->target_count, query->data_start);
+        fprintf(stderr, "dm: ioctl=%d errno=%d targets=%u dstart=%u\\n", rc, errno, query->target_count, query->data_start);
         if (!rc && query->data_start + sizeof(struct dm_target_spec) <= sizeof(buffer)) {
             struct dm_target_spec *t = (struct dm_target_spec *)(buffer + query->data_start);
-            fprintf(stderr, "dm: type=%s start=%llu len=%llu want=%llu
-", t->target_type,
+            fprintf(stderr, "dm: type=%s start=%llu len=%llu want=%llu\\n", t->target_type,
                 (unsigned long long)t->sector_start, (unsigned long long)t->length,
                 (unsigned long long)(bytes / 512));
         }
