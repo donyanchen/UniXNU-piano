@@ -54,6 +54,19 @@ NEW_WRITE = """  if (!p.reuse) {
     write(0x800 + 4 * p.slot, 0);
     write(0xc00 + 4 * p.slot, p.bank);"""
 
+# SmmuTakeover.h: the planner's window must hold the last context bank too.
+# idr1 read on the device is 0x60000053: NUMCB 83, NUMPAGENDXB 6, so the bank
+# array starts at 0x80000 and CB82 ends at 0xD3000, past the old 0xD0000.
+OLD_GEOM = """      (p.pages + banks) * 4096 > 0xd0000) {"""
+NEW_GEOM = """      (p.pages + banks) * 4096 > 0x200000) {"""
+
+# NativeUfs.cpp: the bypass mapping and the context-bank survey both map the
+# register block, and the survey has its own copy of the same guard.
+OLD_MAP = """mapPhys (0x15000000ULL, 0xd0000"""
+NEW_MAP = """mapPhys (0x15000000ULL, 0x200000"""
+OLD_SURVEY = """(globalPages + numCb) * 0x1000 > 0xd0000"""
+NEW_SURVEY = """(globalPages + numCb) * 0x1000 > 0x200000"""
+
 # NativeUfs.cpp: the refusal must carry the registers it decided on.
 OLD_PANIC = """    panic ("NATIVE_UFS smmu: %s slot=%u smr=%x s2cr=%x", plan.error, plan.slot, plan.smr, plan.s2cr);"""
 
@@ -61,9 +74,14 @@ NEW_PANIC = """    panic ("NATIVE_UFS smmu: %s slot=%u smr=%x s2cr=%x idr0=%x id
            plan.error, plan.slot, plan.smr, plan.s2cr,
            read32 (smmu, 0x20), read32 (smmu, 0x24), read32 (smmu, 0x28), read32 (smmu, 0x00));"""
 
+# (old, new, replace-every-occurrence). The bypass path and the context-bank
+# survey map the same block with different variable names, so the map fix has
+# to hit both.
 EDITS = {
-    "SmmuTakeover.h": [(OLD_MATCH, NEW_MATCH), (OLD_WRITE, NEW_WRITE)],
-    "NativeUfs.cpp": [(OLD_PANIC, NEW_PANIC)],
+    "SmmuTakeover.h": [(OLD_MATCH, NEW_MATCH, False), (OLD_WRITE, NEW_WRITE, False),
+                       (OLD_GEOM, NEW_GEOM, False)],
+    "NativeUfs.cpp": [(OLD_PANIC, NEW_PANIC, False), (OLD_MAP, NEW_MAP, True),
+                      (OLD_SURVEY, NEW_SURVEY, False)],
 }
 
 
@@ -77,12 +95,13 @@ def main() -> int:
         found = 0
         for path in pathlib.Path(args.root).rglob(name):
             text = path.read_text()
-            for old, new in pairs:
+            for old, new, everywhere in pairs:
                 if old not in text:
                     continue
-                text = text.replace(old, new, 1)
-                found += 1
-                total += 1
+                hits = text.count(old)
+                text = text.replace(old, new) if everywhere else text.replace(old, new, 1)
+                found += hits
+                total += hits
             path.write_text(text)
         print(f"  {name}: {found} edit(s)")
         if found == 0:
