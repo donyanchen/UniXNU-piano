@@ -1,0 +1,29 @@
+name: ufspark
+
+# Builds the static aarch64 tool that carves a plain partition out of the tail
+# of userdata on the tablet: F2FS shrink first, then both GPT copies, with
+# read-back verification. Nothing here touches a device.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cross compiler
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gcc-aarch64-linux-gnu
+      - name: Build piano-park
+        run: |
+          aarch64-linux-gnu-gcc -O2 -static -s -Wall -Wextra \
+            -o piano-park tools/ufspark/piano-esp.c
+          file piano-park
+          ls -l piano-park
+      - uses: actions/upload-artifact@v4
+        with:
+          name: piano-park
+          path: piano-park
+          if-no-files-found: error
