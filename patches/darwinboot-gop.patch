@@ -1,0 +1,54 @@
+diff --git a/DarwinBootPkg/Driver/DarwinBoot.c b/DarwinBootPkg/Driver/DarwinBoot.c
+index 3b6cafc..e1fb458 100644
+--- a/DarwinBootPkg/Driver/DarwinBoot.c
++++ b/DarwinBootPkg/Driver/DarwinBoot.c
+@@ -52,15 +52,43 @@ ReadBootVideo (UINT64 Video[6])
+ {
+   EFI_GRAPHICS_OUTPUT_PROTOCOL           *Gop;
+   EFI_STATUS                            Status;
++  EFI_HANDLE                            *Handles;
++  UINTN                                 Count;
++  UINTN                                 Index;
+ 
+   ZeroMem (Video, 6 * sizeof (*Video));
+-  Status = gBS->HandleProtocol (gST->ConsoleOutHandle, &gEfiGraphicsOutputProtocolGuid, (VOID **)&Gop);
+-  if (EFI_ERROR (Status)) {
+-    Status = gBS->LocateProtocol (&gEfiGraphicsOutputProtocolGuid, NULL, (VOID **)&Gop);
++  //
++  // This tablet publishes more than one GOP. ScaledFbDxe installs a 1600x1068
++  // console in front of the panel and reports PixelBltOnly with a zero
++  // FrameBufferBase, which the kernel cannot write to; the SimpleFb driver
++  // behind it owns the real linear 3200x2136 buffer. LocateProtocol hands back
++  // whichever registered first, DarwinBootVideoFromGop then answers
++  // EFI_UNSUPPORTED, and Boot () gave up before it ever reached the kernel.
++  // Walk every instance and take the first addressable framebuffer.
++  //
++  Handles = NULL;
++  Count   = 0;
++  Status  = gBS->LocateHandleBuffer (ByProtocol, &gEfiGraphicsOutputProtocolGuid, NULL, &Count, &Handles);
++  if (!EFI_ERROR (Status)) {
++    for (Index = 0; Index < Count; Index++) {
++      if (EFI_ERROR (gBS->HandleProtocol (Handles[Index], &gEfiGraphicsOutputProtocolGuid, (VOID **)&Gop))) {
++        continue;
++      }
++      if (!EFI_ERROR (DarwinBootVideoFromGop (Gop, Video))) {
++        DEBUG ((DEBUG_ERROR, "DARWINBOOT: video from handle %u of %u\n", (UINT32)Index, (UINT32)Count));
++        FreePool (Handles);
++        return EFI_SUCCESS;
++      }
++    }
++    FreePool (Handles);
+   }
+-  if (Status == EFI_NOT_FOUND) { return EFI_SUCCESS; }
+-  if (EFI_ERROR (Status)) { return Status; }
+-  return DarwinBootVideoFromGop (Gop, Video);
++  //
++  // Nothing addressable: boot without video instead of refusing outright. The
++  // memory log still records the attempt, so this is diagnosable.
++  //
++  DEBUG ((DEBUG_ERROR, "DARWINBOOT: no linear GOP among %u, booting without video\n", (UINT32)Count));
++  ZeroMem (Video, 6 * sizeof (*Video));
++  return EFI_SUCCESS;
+ }
+ 
+ STATIC
