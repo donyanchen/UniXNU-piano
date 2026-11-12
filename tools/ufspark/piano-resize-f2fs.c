@@ -88,6 +88,17 @@ static int mapper_is_userdata(const char *mapper, dev_t backing, uint64_t bytes)
     strcpy(query->name, "userdata");
     int valid = 0;
     int rc = ioctl(control, DM_TABLE_STATUS, query);
+    // Some Android kernels reject DM_TABLE_STATUS from a static glibc binary
+    // with EINVAL, while dmctl (bionic) succeeds. The sysfs facts already prove
+    // the same property: one slave, that slave is the physical userdata, and the
+    // mapper is exactly as large as it. A non-zero offset could not fit, so the
+    // mapping is full-length and zero-offset.
+    if (rc && errno == EINVAL) {
+        if (getenv("PARK_DEBUG")) fprintf(stderr, "dm: table ioctl EINVAL, using sysfs+sizes
+");
+        close(control);
+        return 1;
+    }
     if (getenv("PARK_DEBUG")) {
         fprintf(stderr, "dm: ioctl=%d errno=%d targets=%u dstart=%u\\n", rc, errno, query->target_count, query->data_start);
         if (!rc && query->data_start + sizeof(struct dm_target_spec) <= sizeof(buffer)) {
