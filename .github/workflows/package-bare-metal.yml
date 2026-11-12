@@ -45,10 +45,12 @@ jobs:
         run: |
           (cd uefi && chmod +x tools/setup-deps.sh && ./tools/setup-deps.sh) || echo "setup-deps skipped"
           git apply device/patches/uefi/piano-dsc-unixnulib.patch
-          # The only GOP here is ScaledFbDxe's BltOnly console; DarwinBoot needs
-          # a linear framebuffer, so leave that driver out of the build.
-          git apply device/patches/uefi/piano-dsc-no-scaledfb.patch
-          grep -n 'ScaledFbDxe is deliberately not built' uefi/uefi/pianoPkg/piano.dsc
+          # ScaledFbDxe is the only GOP provider and it reports PixelBltOnly
+          # with FrameBufferBase 0, so DarwinBoot cannot hand XNU a linear
+          # framebuffer. Select the vendor DisplayDxe path instead of dropping
+          # the driver, which would leave no GOP at all.
+          git apply device/patches/uefi/piano-dsc-display-dxe.patch
+          grep -n 'USE_CUSTOM_DISPLAY_DRIVER      = 1' uefi/uefi/pianoPkg/piano.dsc
           # A vendor ABL refuses the 160 MiB payload ramdisk, so the payload
           # arrives over USB instead: this raises the download cap, publishes
           # the staged bytes as a block device and holds the boot menu back
