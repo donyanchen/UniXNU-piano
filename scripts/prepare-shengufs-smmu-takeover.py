@@ -90,11 +90,13 @@ def main() -> int:
     parser.add_argument("root", help="build output directory holding the fetched tree")
     args = parser.parse_args()
 
+    touched = []
     total = 0
     for name, pairs in EDITS.items():
         found = 0
         for path in pathlib.Path(args.root).rglob(name):
             text = path.read_text()
+            changed = False
             for old, new, everywhere in pairs:
                 if old not in text:
                     continue
@@ -102,12 +104,26 @@ def main() -> int:
                 text = text.replace(old, new) if everywhere else text.replace(old, new, 1)
                 found += hits
                 total += hits
-            path.write_text(text)
+                changed = True
+            if changed:
+                path.write_text(text)
+                touched.append((path, pairs))
         print(f"  {name}: {found} edit(s)")
         if found == 0:
             print(f"  !! {name} was not patched under {args.root}", file=sys.stderr)
             return 1
-    print(f"smmu takeover: {total} edit(s)")
+
+    # The tree also carries the SM8750 platform kit's refactored copy of these
+    # files; it takes the window as a parameter and is not what this driver
+    # compiles. Verify only the files that were actually rewritten: every old
+    # string must be gone from them.
+    for path, pairs in touched:
+        text = path.read_text()
+        for old, _, _ in pairs:
+            if old in text:
+                print(f"  !! {path}: still contains {old.splitlines()[0][:60]!r}", file=sys.stderr)
+                return 1
+    print(f"smmu takeover: {total} edit(s) verified in {len(touched)} file(s)")
     return 0
 
 
