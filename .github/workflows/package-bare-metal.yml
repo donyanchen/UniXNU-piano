@@ -150,6 +150,9 @@ jobs:
           # mapping". Take the exclusive entry over the way arm_smmu_write_sme
           # does (SMR off, S2CR, SMR on) instead of insisting on an empty slot.
           python3 ../device/scripts/prepare-shengufs-smmu-takeover.py out
+          # Temporary bisect probe: stop right after the bypass writes so the
+          # screen says whether they survived.
+          python3 ../device/scripts/prepare-shengufs-smmu-probe.py out
           # Only the ShengUfs copy is compiled here; out/feeds also carries the
           # SM8750 platform kit's refactored copy, which takes the window as a
           # parameter and must not be grepped for this constant.
