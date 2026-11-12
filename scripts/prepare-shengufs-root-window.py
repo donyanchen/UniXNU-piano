@@ -48,20 +48,23 @@ NEW_PARSE = """  PE_parse_boot_argn ("native-ufs-root", &rootMode, sizeof (rootM
   }"""
 
 
-# RootLayout.h: window mode skips the GPT walk and reads the manifest at relative LBA 0.
-LAYOUT_OLD = """  gRootDiagnostic.stage = \"GPT header\";"""
-LAYOUT_NEW = """  if (gWindowBaseLba && gWindowBlocks) {
-    // Window mode: the caller named a block range that starts with the root
-    // manifest, so there is no GPT to walk.
+# RootLayout.h: window mode skips the GPT walk and the userdata lookup. This is
+# an if/else rather than a goto: the GPT path declares locals, and jumping over
+# their initialisation is a hard error in C++.
+LAYOUT_OLD = """  gRootDiagnostic.stage = \"GPT header\";
+  bzero (layout, sizeof (*layout));"""
+LAYOUT_NEW = """  bzero (layout, sizeof (*layout));
+  if (gWindowBaseLba && gWindowBlocks) {
+    // Window mode: the boot argument names a block range that begins with the
+    // root manifest, so there is no GPT to walk.
     layout->userdataFirst = 0;
     layout->userdataLast = gWindowBlocks - 1;
     layout->gptEntryCount = 0;
     layout->gptEntriesLba = 0;
-    goto manifest;
-  }
+  } else {
   gRootDiagnostic.stage = \"GPT header\";"""
 LAYOUT_LABEL_OLD = """  gRootDiagnostic.first = layout->userdataFirst;"""
-LAYOUT_LABEL_NEW = """manifest:
+LAYOUT_LABEL_NEW = """  }
   gRootDiagnostic.first = layout->userdataFirst;"""
 
 
@@ -103,7 +106,7 @@ def main() -> int:
         if "ShengUfs" not in str(path):
             continue
         text = path.read_text()
-        if "goto manifest" in text:
+        if "Window mode: the boot argument" in text:
             continue
         if LAYOUT_OLD not in text or LAYOUT_LABEL_OLD not in text:
             print(f"  !! {path}: layout anchors not found", file=sys.stderr)
