@@ -58,11 +58,13 @@ jobs:
         run: |
           ./unixnu userdata -D ../device > /tmp/u.log 2>&1 || { tail -60 /tmp/u.log | sed 's/^/::error::/'; exit 1; }
           tail -25 /tmp/u.log
-          ls -l out/userdata-root.img out/userdata-root.json
+          IMG=out/piano/ipados-17.7.11-21H461/piano/userdata/userdata-root.img
+          ls -l "$IMG" out/piano/ipados-17.7.11-21H461/piano/userdata/userdata-root.json
+          echo "IMAGE_PATH=$IMG" >> $GITHUB_ENV
       - name: split
         run: |
           mkdir -p parts
-          split -b 1900m -d -a 1 UniXNU/out/userdata-root.img parts/root.part.
+          split -b 1900m -d -a 1 "UniXNU/$IMAGE_PATH" parts/root.part.
           ls -l parts
       - uses: actions/upload-artifact@v4
         with:
