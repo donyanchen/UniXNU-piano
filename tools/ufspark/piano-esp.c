@@ -293,9 +293,11 @@ static int park_command(int argc, char **argv) {
     int map = open(mapping, O_RDONLY | O_CLOEXEC); uint64_t blocks, section;
     require(map >= 0 && !supers(map, &blocks, &section), "Cannot read plaintext F2FS superblocks");
     close(map);
-    uint64_t park_blocks = bytes / 4096;
-    require(park_blocks % section == 0, "SIZE_BYTES must align to F2FS sections");
-    uint64_t limit = (last + 1 - first) - park_blocks;   // new userdata length, fs blocks
+    uint64_t total = last + 1 - first;
+    uint64_t want_blocks = bytes / 4096;
+    require(want_blocks >= section && want_blocks < total, "SIZE_BYTES out of range");
+    uint64_t limit = ((total - want_blocks) / section) * section;  // round down to sections
+    uint64_t park_blocks = total - limit;
     require(limit > 2 * section && first + limit - 1 < last, "Cannot shrink userdata by that much");
     require(first + limit + park_blocks - 1 <= last, "Park extent would exceed userdata");
     int backup = open(argv[3], O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW, 0600);
