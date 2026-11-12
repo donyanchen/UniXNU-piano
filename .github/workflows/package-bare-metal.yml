@@ -145,6 +145,14 @@ jobs:
           for h in $(find out -name GccUfs.h); do
             grep -n 'GCC_UFS_PHY_AHB_ENABLE\|GCC_UFS_PHY_TX_SYMBOL0_ENABLE\|GCC_UFS_PHY_RX_SYMBOL0_ENABLE' "$h" | head -3
           done
+          # The SMMU still carries the previous OS's stream entry for SID 0x60,
+          # so the shipped planner refuses with "conflicting UFS stream
+          # mapping". Take the exclusive entry over the way arm_smmu_write_sme
+          # does (SMR off, S2CR, SMR on) instead of insisting on an empty slot.
+          python3 ../device/scripts/prepare-shengufs-smmu-takeover.py out
+          for h in $(find out -name SmmuTakeover.h); do
+            grep -n 'SMR off' "$h" | head -2
+          done
       - name: policies
         working-directory: UniXNU
         run: |
