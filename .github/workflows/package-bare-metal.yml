@@ -170,6 +170,9 @@ jobs:
           # The ABL's link state never completes our first command: reset and
           # start the link ourselves, as the vendor UFSDxe patch does.
           python3 ../device/scripts/prepare-shengufs-host-reset.py out
+          # S2CR kept the bootloader's TYPE 0 (translation) and the controller
+          # never fetched our request list. Force real bypass.
+          python3 ../device/scripts/prepare-shengufs-smmu-bypass.py out
           python3 ../device/scripts/prepare-shengufs-root-debug.py out
           for h in $(find out -path '*ShengUfs*' -name SmmuTakeover.h); do
             grep -n 'kUfsSmmuMapBytes = 0x100000' "$h" | head -2
