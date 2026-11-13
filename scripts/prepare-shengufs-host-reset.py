@@ -30,6 +30,15 @@ SOLUTION = """  //
   write32 (gHost.hc, 0x44, 0);
   write32 (gHost.hc, 0x48, 0);
   write32 (gHost.hc, 0x4C, 0);
+  write32 (gHost.hc, 0x40, 0x14);              // DME_RESET: drop a suspended PMC
+  for (uint32_t spin = 0; spin < 20000; spin++) {
+    if (read32 (gHost.hc, 0x20) & 4) break;    // UIC command completion
+    IODelay (10);
+  }
+  write32 (gHost.hc, 0x20, 4);
+  write32 (gHost.hc, 0x44, 0);
+  write32 (gHost.hc, 0x48, 0);
+  write32 (gHost.hc, 0x4C, 0);
   write32 (gHost.hc, 0x40, 0x16);              // DME_LINKSTARTUP
   for (uint32_t spin = 0; spin < 20000; spin++) {
     if (read32 (gHost.hc, 0x20) & 4) break;    // UIC command completion
