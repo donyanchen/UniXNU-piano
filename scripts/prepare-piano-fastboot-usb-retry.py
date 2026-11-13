@@ -23,6 +23,12 @@ GLOBAL_OLD = """STATIC BOOLEAN                mVolumeReady;"""
 GLOBAL_NEW = """STATIC BOOLEAN                mVolumeReady;
 
 //
+// Set when the host completes SET_CONFIGURATION; never set means the host did
+// not enumerate us at all.
+//
+STATIC BOOLEAN                mHostConnected;
+
+//
 // DWC3 controller the fastboot stack drives. Device registers live at 0xC700:
 // DCFG, DCTL, DEVTEN, DSTS. A controller left with DCTL.RUN_STOP clear never
 // answers the host, and nothing prints that today.
@@ -56,8 +62,9 @@ Dwc3Run (
 {
   UINT32  Dctl;
 
-  if ((Dwc3Read (DWC3_DCTL) & 1) == 0) {
-    *(volatile UINT32 *)(UINTN)(DWC3_BASE + DWC3_DCTL) = Dwc3Read (DWC3_DCTL) | 1;
+  Dctl = Dwc3Read (DWC3_DCTL);
+  if ((Dctl & 1) == 0) {
+    *(volatile UINT32 *)(UINTN)(DWC3_BASE + DWC3_DCTL) = Dctl | 1;
     gBS->Stall (10000);
   }
 
