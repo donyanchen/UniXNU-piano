@@ -60,6 +60,9 @@ jobs:
           # so retry the device role while no connected event arrives.
           python3 device/scripts/prepare-piano-fastboot-usb-retry.py uefi
           grep -n 'mHostConnected' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
+          # StartEx leaves DCTL.RUN_STOP clear, so run the controller ourselves.
+          python3 device/scripts/prepare-piano-fastboot-usb-run.py uefi
+          grep -n 'Dwc3Run' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
           grep -n 'oem ramdisk' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
           grep -n 'SIZE_256MB' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
           # Upstream BootShim.S writes FD_SIZE alone into the ARM64 image_size
