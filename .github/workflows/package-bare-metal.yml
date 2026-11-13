@@ -63,6 +63,9 @@ jobs:
           # Two-second metronome stalls block the USB driver's event handler,
           # so the host times out during enumeration and never retries.
           python3 device/scripts/prepare-piano-fastboot-usb-timing.py uefi
+          # The payload can also live in the ipados partition, so a firmware
+          # whose USB never comes up still boots the kernel.
+          python3 device/scripts/prepare-piano-payload-storage.py uefi
           # StartEx leaves DCTL.RUN_STOP clear, so run the controller ourselves.
           grep -n 'oem ramdisk' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
           grep -n 'SIZE_256MB' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
