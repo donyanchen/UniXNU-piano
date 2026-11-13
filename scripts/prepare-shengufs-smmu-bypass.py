@@ -39,7 +39,11 @@ def main() -> int:
         # the entry is already valid on this board, so the reuse guard would
         # skip the rewrite and leave S2CR as the bootloader set it
         text = text.replace("  if (!p.reuse) {\n    write(0xc00 + 4 * p.slot, (2U << 16));",
-                            "  {\n    write(0xc00 + 4 * p.slot, (2U << 16));", 1)
+                            "  if (p.reuse || (p.slot != 0xffffffffU && p.slot < 128)) {\n    write(0xc00 + 4 * p.slot, (2U << 16));", 1)
+        # the closing verification reads the same register: it must not touch an
+        # invalid slot either
+        text = text.replace("  if (read(0x800 + 4 * p.slot) != (0x80000000U | stream) ||",
+                            "  if (p.slot == 0xffffffffU || p.slot >= 128) return \"no stream-match slot\";\n  if (read(0x800 + 4 * p.slot) != (0x80000000U | stream) ||", 1)
         if not (n1 and n2):
             print(f"  !! {path}: write={n1} check={n2}", file=sys.stderr)
             continue
