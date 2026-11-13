@@ -33,7 +33,7 @@ NEW_BRINGUP = """  if (!hostBringUp (&why)) {
            "utrl=%llx dma=%llx ocs=%02x polls=%u dbSeen=%x isSeen=%x\\n"
            "cmd n=%u type=%02x op=%02x lun=%02x rsp=%08x proto=%u\\n"
            "smmu smr=%08x s2cr=%08x cbar=%08x sctlr=%08x fault g=%08x cb=%08x",
-           why, hcs, (hcs >> 5) & 0xf, hce, isReg, dbReg, rsrReg,
+           why, hcs, (hcs >> 8) & 0x3, hce, isReg, dbReg, rsrReg,
            (unsigned long long) utrl, (unsigned long long) gRootDiagnostic.dma,
            gRootDiagnostic.ocs, gRootDiagnostic.polls, gRootDiagnostic.dbSeen, gRootDiagnostic.isSeen,
            gRootDiagnostic.command, gRootDiagnostic.type, gRootDiagnostic.opcode, gRootDiagnostic.lun,
