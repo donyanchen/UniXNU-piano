@@ -170,6 +170,9 @@ jobs:
           # The ABL's link state never completes our first command: reset and
           # start the link ourselves, as the vendor UFSDxe patch does.
           python3 ../device/scripts/prepare-shengufs-host-reset.py out
+          # Leave the SMMU untouched and send the first command from the firmware's
+          # own request list: writing S2CR resets this SoC even in bypass.
+          python3 ../device/scripts/prepare-shengufs-adopt-nosmmu.py out
           python3 ../device/scripts/prepare-shengufs-smmu-bypass.py out
           # Bisect probe: stop right after the SMMU bypass write. A reset with no
           # message means the write itself is fatal on this part; a panic means the
