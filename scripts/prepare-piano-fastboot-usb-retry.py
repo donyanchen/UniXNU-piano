@@ -126,8 +126,27 @@ LOOP_NEW = """  for (Elapsed = 0; (Elapsed < TimeoutMs) && !mVolumeReady; Elapse
     // away. MMIO only: the vendor driver's own Stop ()/StartEx () cycle was
     // what crashed the firmware here, not the register.
     //
-    if (!mHostConnected && !mVolumeReady && (Elapsed != 0) && ((Elapsed % 5000) < 10)) {
-      Dwc3Run (L"retry");
+    if (!mHostConnected && !mVolumeReady && (Elapsed == 8000)) {
+      UINTN  Spin;
+
+      //
+      // The host never attached. Rebuild the device role from scratch, the way
+      // Linux does for a wedged controller: stop it, soft-reset the core, start
+      // it again, then run it. Exactly once - repeating this crashed the
+      // vendor driver when it ran every five seconds.
+      //
+      Print (L"fastboot: no host yet, rebuilding the controller\\n");
+      mUsb->Stop ();
+      gBS->Stall (100000);
+      *(volatile UINT32 *)(UINTN)(DWC3_BASE + 0xC110) = Dwc3Read (0xC110) | (1U << 11);
+      for (Spin = 0; Spin < 1000; Spin++) {
+        if ((Dwc3Read (0xC110) & (1U << 11)) == 0) {
+          break;
+        }
+        gBS->Stall (1000);
+      }
+      mUsb->StartEx (&mDescSet);
+      Dwc3Run (L"after reset");
     }
   }"""
 
