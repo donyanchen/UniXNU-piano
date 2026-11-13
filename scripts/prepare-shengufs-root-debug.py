@@ -17,7 +17,29 @@ OLD_BRINGUP = """  if (!hostBringUp (&why)) {
   }"""
 NEW_BRINGUP = """  if (!hostBringUp (&why)) {
     rootDiagnosticFailure (why);
-    panic ("NATIVE_UFS root: bring-up failed: %s", why);
+    // The reason alone cannot tell a dead link from a DMA the controller never
+    // fetched, so put the controller, the queue and the SMMU on the screen.
+    uintptr_t hc = gHost.hc;
+    uint32_t hcs = hc ? read32 (hc, 0x30) : 0;
+    uint32_t hce = hc ? read32 (hc, 0x34) : 0;
+    uint32_t isReg = hc ? read32 (hc, 0x20) : 0;
+    uint32_t dbReg = hc ? read32 (hc, 0x58) : 0;
+    uint32_t rsrReg = hc ? read32 (hc, 0x60) : 0;
+    uint64_t utrl = hc ? ((uint64_t (read32 (hc, 0x54)) << 32) | read32 (hc, 0x50)) : 0;
+    uint32_t gfsr = gHost.smmu ? read32 (gHost.smmu, 0x48) : 0;
+    uint32_t fsr = gHost.cb ? read32 (gHost.cb, 0x58) : 0;
+    panic ("NATIVE_UFS root: bring-up failed: %s\\n"
+           "hcs=%08x ulss=%u hce=%08x is=%08x db=%08x rsr=%08x\\n"
+           "utrl=%llx dma=%llx ocs=%02x polls=%u dbSeen=%x isSeen=%x\\n"
+           "cmd n=%u type=%02x op=%02x lun=%02x rsp=%08x proto=%u\\n"
+           "smmu smr=%08x s2cr=%08x cbar=%08x sctlr=%08x fault g=%08x cb=%08x",
+           why, hcs, (hcs >> 5) & 0xf, hce, isReg, dbReg, rsrReg,
+           (unsigned long long) utrl, (unsigned long long) gRootDiagnostic.dma,
+           gRootDiagnostic.ocs, gRootDiagnostic.polls, gRootDiagnostic.dbSeen, gRootDiagnostic.isSeen,
+           gRootDiagnostic.command, gRootDiagnostic.type, gRootDiagnostic.opcode, gRootDiagnostic.lun,
+           gRootDiagnostic.response, gRootDiagnostic.protocol,
+           gRootDiagnostic.smr, gRootDiagnostic.s2cr, gRootDiagnostic.cbar, gRootDiagnostic.sctlr,
+           gfsr, fsr);
   }"""
 
 OLD_LAYOUT = """  if (!layout || !findRootLayout (layout, &why)) {
