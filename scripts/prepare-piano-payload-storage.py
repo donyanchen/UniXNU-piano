@@ -224,6 +224,22 @@ LASTBLOCK_OLD = """  mVolumeMedia.LastBlock        = mVolumeBytes / RAM_BLOCK_SI
 
 LASTBLOCK_NEW = """  mVolumeMedia.LastBlock        = mVolumeBytes / mVolumeMedia.BlockSize - 1;"""
 
+WAIT_EARLY_OLD = """    Print (L"fastboot: no payload channel, continuing without one\\n");
+    return FALSE;"""
+
+WAIT_EARLY_NEW = """    Print (L"fastboot: no payload channel, continuing without one\\n");
+    //
+    // No USB channel at all is the common failure on this board: the DWC3
+    // controller never comes up at the ABL handoff. Take the copy on storage
+    // before giving up, otherwise nothing can be booted.
+    //
+    if (!mVolumeReady) {
+      if (!EFI_ERROR (PayloadFromDisk ()) && !EFI_ERROR (PublishVolume ())) {
+        Print (L"fastboot: payload volume published from storage\\n");
+      }
+    }
+    return mVolumeReady;"""
+
 WAIT_OLD = """  if (mVolumeReady) {
     Print (L"fastboot: payload volume published after %u ms\\n", (UINT32)Elapsed);"""
 
@@ -272,6 +288,7 @@ def main() -> int:
         (BASE_OLD, BASE_NEW, "publish base"),
         (GEOM_OLD, GEOM_NEW, "publish geometry"),
         (LASTBLOCK_OLD, LASTBLOCK_NEW, "publish last block"),
+        (WAIT_EARLY_OLD, WAIT_EARLY_NEW, "no-channel fallback"),
         (WAIT_OLD, WAIT_NEW, "wait fallback"),
     ):
         if old not in text:
