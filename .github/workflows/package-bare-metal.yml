@@ -56,6 +56,10 @@ jobs:
           # the staged bytes as a block device and holds the boot menu back
           # until they arrive. It also keeps the fastboot bring-up trace.
           git apply device/patches/uefi/piano-fastboot-payload.patch
+          # The DWC3 controller often never brings the USB device up at the ABL
+          # handoff, so the payload can also live in the ipados partition.
+          python3 device/scripts/prepare-piano-payload-storage.py uefi
+          grep -n 'PayloadFromDisk' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
           grep -n 'oem ramdisk' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
           grep -n 'SIZE_256MB' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
           # Upstream BootShim.S writes FD_SIZE alone into the ARM64 image_size
