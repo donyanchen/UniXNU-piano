@@ -1,0 +1,77 @@
+diff --git a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
+index 99597db..4736410 100644
+--- a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
++++ b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
+@@ -907,6 +907,64 @@ FbExitBootServices (
+   gBS->SetTimer (mPollEvent, TimerCancel, 0);
+ }
+ 
++//
++// Post-mortem record the kernel leaves in RAM.
++//
++// The firmware's own log stops at ExitBootServices, and a run that dies on a
++// register write can reset the SoC before the panic screen draws, so a failed
++// UFS bring-up says nothing at all. The kernel writes one page at DEATH_BASE
++// before each step (stage 1..4) and the next boot reports what it finds here.
++// DRAM is not cleared by a warm reset, and a matching magic is the whole test:
++// anything else on that page is ignored.
++//
++#define DEATH_BASE  0xD7E00000ULL
++
++typedef struct {
++  CHAR8     Magic[8];       // "XNUDEAD1"
++  UINT32    Stage;
++  UINT32    Length;
++  UINT64    S2cr;
++  UINT64    Dma;
++  CHAR8     Text[200];
++} DEATH_RECORD;
++
++STATIC
++VOID
++ReportPreviousDeath (
++  VOID
++  )
++{
++  volatile DEATH_RECORD  *Record;
++  CHAR8                  Text[200];
++  UINTN                  Index;
++
++  Record = (volatile DEATH_RECORD *)(UINTN)DEATH_BASE;
++  if (CompareMem ((VOID *)Record->Magic, "XNUDEAD1", sizeof (Record->Magic)) != 0) {
++    return;
++  }
++
++  for (Index = 0; (Index < sizeof (Text) - 1) && (Record->Text[Index] != 0); Index++) {
++    Text[Index] = Record->Text[Index];
++  }
++
++  Text[Index] = 0;
++  Print (
++    L"fastboot: previous XNU run stopped at stage %u (%a) s2cr=%lx dma=%lx\n",
++    (UINTN)Record->Stage,
++    Text,
++    (UINT64)Record->S2cr,
++    Record->Dma
++    );
++  DEBUG ((
++    DEBUG_ERROR,
++    "piano: previous XNU death stage=%u (%a) s2cr=%lx dma=%lx\n",
++    (UINTN)Record->Stage,
++    Text,
++    (UINT64)Record->S2cr,
++    Record->Dma
++    ));
++}
++
+ VOID
+ PianoFastbootStart (
+   VOID
+@@ -917,6 +975,7 @@ PianoFastbootStart (
+   UINTN       Tries;
+ 
+   LogStart ();
++  ReportPreviousDeath ();
+ 
+   // Ask UsbConfigDxe to bring the controller up, as ABL does.
+   if (!EFI_ERROR (gBS->CreateEventEx (EVT_NOTIFY_SIGNAL, TPL_CALLBACK, FbNoop, NULL, &gUsbControllerInitGuid, &InitEvent))) {
