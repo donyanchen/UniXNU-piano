@@ -171,6 +171,10 @@ jobs:
           # start the link ourselves, as the vendor UFSDxe patch does.
           python3 ../device/scripts/prepare-shengufs-host-reset.py out
           python3 ../device/scripts/prepare-shengufs-smmu-bypass.py out
+          # Bisect probe: stop right after the SMMU bypass write. A reset with no
+          # message means the write itself is fatal on this part; a panic means the
+          # writes landed and the fault is downstream (request-list DMA).
+          python3 ../device/scripts/prepare-shengufs-smmu-probe.py out
           python3 ../device/scripts/prepare-shengufs-root-debug.py out
           for h in $(find out -path '*ShengUfs*' -name SmmuTakeover.h); do
             grep -n 'kUfsSmmuMapBytes = 0x100000' "$h" | head -2
