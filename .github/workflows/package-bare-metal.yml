@@ -153,6 +153,10 @@ jobs:
           # (native-ufs-window-lba/-blocks), so the iPadOS image can sit in a
           # pinned file inside /data instead of overwriting the partition start.
           python3 ../device/scripts/prepare-shengufs-root-window.py out
+          # The generic BSD panic names neither the stage nor the manifest fact,
+          # so a failed root layout is unreadable on a board without serial.
+          # Turn each root failure into a panic that prints both.
+          python3 ../device/scripts/prepare-shengufs-root-debug.py out
           for h in $(find out -path '*ShengUfs*' -name SmmuTakeover.h); do
             grep -n 'kUfsSmmuMapBytes = 0x100000' "$h" | head -2
             grep -n 'mask == 0' "$h" | head -2
