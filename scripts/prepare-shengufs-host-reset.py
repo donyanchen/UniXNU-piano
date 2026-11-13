@@ -21,33 +21,24 @@ import pathlib
 import sys
 
 SOLUTION = """  //
-  // The ABL leaves the controller with its own request list and a link state
-  // the first NOP OUT never completes on: the doorbell stays set and IS stays
-  // clear, so the command is never fetched. Cycle HCE and start the link
-  // ourselves, the way the vendor UFSDxe patch resets the link on this board.
+  // The ABL leaves the controller ready (HCS low nibble 0x0f) with its own
+  // request list, and our first NOP OUT never completes: the doorbell stays set
+  // and IS stays clear, so the command is never fetched. Leave HCE and the list
+  // base alone - cycling HCE clears UTRLBA and the controller then never reports
+  // ready again - and only restart the link through the UIC path.
   //
-  write32 (gHost.hc, 0x34, 0);
-  for (uint32_t spin = 0; spin < 1000; spin++) {
-    if ((read32 (gHost.hc, 0x34) & 1) == 0) break;
-    IODelay (10);
-  }
-  write32 (gHost.hc, 0x34, 1);
-  for (uint32_t spin = 0; spin < 1000; spin++) {
-    if ((read32 (gHost.hc, 0x30) & 7) == 7) break;
-    IODelay (10);
-  }
   write32 (gHost.hc, 0x44, 0);
   write32 (gHost.hc, 0x48, 0);
   write32 (gHost.hc, 0x4C, 0);
   write32 (gHost.hc, 0x40, 0x16);              // DME_LINKSTARTUP
-  for (uint32_t spin = 0; spin < 10000; spin++) {
+  for (uint32_t spin = 0; spin < 20000; spin++) {
     if (read32 (gHost.hc, 0x20) & 4) break;    // UIC command completion
     IODelay (10);
   }
   write32 (gHost.hc, 0x20, 4);
   gRootDiagnostic.uic[0] = read32 (gHost.hc, 0x30);
   gRootDiagnostic.uic[1] = read32 (gHost.hc, 0x34);
-  gRootDiagnostic.uic[2] = read32 (gHost.hc, 0x44);
+  gRootDiagnostic.uic[2] = read32 (gHost.hc, 0x40);
 
 """
 
