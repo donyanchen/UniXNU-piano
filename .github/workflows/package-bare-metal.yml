@@ -197,10 +197,12 @@ jobs:
           # The kernel writes its bring-up stage to a fixed RAM page before each UFS
           # step; the firmware patch above reports it on the next boot.
           python3 ../device/scripts/prepare-shengufs-deathlog.py out
-          # Bisect probe: stop right after the SMMU bypass write. A reset with no
-          # message means the write itself is fatal on this part; a panic means the
-          # writes landed and the fault is downstream (request-list DMA).
-          python3 ../device/scripts/prepare-shengufs-smmu-probe.py out
+          # The device answered this probe: slot=1 bank=82 s2cr=00000052 sctlr=0.
+          # Firmware detach left the stream on a translation bank whose SCTLR is
+          # clear, so nothing the controller fetches can be translated. Put the
+          # stream in real bypass instead: the buffers are physical and reach
+          # above 4 GiB, which a stage-2 table this driver does not own cannot map.
+          python3 ../device/scripts/prepare-shengufs-smmu-bypass.py out
           python3 ../device/scripts/prepare-shengufs-root-debug.py out
           for h in $(find out -path '*ShengUfs*' -name SmmuTakeover.h); do
             grep -n 'kUfsSmmuMapBytes = 0x100000' "$h" | head -2
