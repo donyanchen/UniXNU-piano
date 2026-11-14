@@ -180,6 +180,7 @@ jobs:
           # The queue takeover prints what the controller did with the list base
           # and the run-stop bit; HCE cannot be cycled before it, because
           # hostStopQueue refuses to run when HCE is clear.
+          python3 ../device/scripts/prepare-shengufs-mcq-legacy.py out
           python3 ../device/scripts/prepare-shengufs-queue-print.py out
           python3 ../device/scripts/prepare-shengufs-pmc-reset.py out
           # The kernel writes its bring-up stage to a fixed RAM page before each UFS
