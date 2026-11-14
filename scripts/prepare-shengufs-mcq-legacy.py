@@ -15,14 +15,14 @@ that was written.
 
 The selector is REG_UFS_MEM_CFG (0x300), bit 0 (MCQ_MODE_SELECT), and it may
 only be changed with the controller disabled, so the mode is switched inside an
-HCE 1->0->1 cycle. The identification registers are printed first, because
-CAP (bit 30 MCQ_SUPPORT), MCQCAP and UFS_VERSION decide whether legacy mode is
-even available on this part.
+HCE 1->0->1 cycle. The identification registers are printed on every boot, so a
+run states the mode either way: CAP bit 30 is MCQ_SUPPORT and MCQCAP says what
+the part can do.
 
 prints:
     UFSID ver cap mcqcap memcfg
     UFSID mcq off memcfg hce
-    UFSID legacy hcs hce
+    UFSID legacy hcs hce memcfg
 
 usage: prepare-shengufs-mcq-legacy.py <build tree root>
 SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -33,17 +33,19 @@ import sys
 
 MARKER = "UFSID mcq off"
 
-ANCHOR = """  // Confirm the firmware has no active transfer/task before changing its
-  // request list or the storage stream's SMMU routing."""
+HEAD = """static bool hostStopQueue (const char **why)
+{
+"""
 
 PROBE = """  // A UFSHCI 4.0 part can come up with MCQ selected, and then every legacy
   // queue register below is silently ignored. Read the identification
-  // registers, then switch to legacy SDB with the controller disabled.
+  // registers on every boot, so the log says which mode the part is in, and
+  // switch to legacy SDB with the controller disabled when MCQ is selected.
+  printf ("UFSID ver=%08x cap=%08x mcq=%08x memcfg=%08x\\n",
+          read32 (gHost.hc, 0x08), read32 (gHost.hc, 0x00),
+          read32 (gHost.hc, 0x04), read32 (gHost.hc, 0x300));
   if ((read32 (gHost.hc, 0x300) & 1) != 0) {
     uint32_t memCfg = read32 (gHost.hc, 0x300);
-    printf ("UFSID ver=%08x cap=%08x mcq=%08x memcfg=%08x\\n",
-            read32 (gHost.hc, 0x08), read32 (gHost.hc, 0x00),
-            read32 (gHost.hc, 0x04), memCfg);
     hostWrite (0x34, 0);
     for (uint32_t spin = 0; spin < 10000; spin++) {
       if ((read32 (gHost.hc, 0x34) & 1) == 0) break;
@@ -79,16 +81,10 @@ def main() -> int:
             print(f"  {path}: already patched")
             patched += 1
             continue
-        if ANCHOR not in text:
-            print(f"  !! {path}: hostStopQueue anchor not found", file=sys.stderr)
-            continue
-        head = """static bool hostStopQueue (const char **why)
-{
-"""
-        if head not in text:
+        if HEAD not in text:
             print(f"  !! {path}: hostStopQueue header not found", file=sys.stderr)
             continue
-        text = text.replace(head, head + PROBE, 1)
+        text = text.replace(HEAD, HEAD + PROBE, 1)
         path.write_text(text)
         patched += 1
         print(f"  {path}: legacy SDB selected when MCQ is active")
