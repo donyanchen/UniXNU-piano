@@ -36,6 +36,17 @@ jobs:
           ref: 31545f9392d5f5c2acae14cec2fa3a0aa1de51d4
           path: uefi
           submodules: recursive
+      # ipsw fetch range-reads only the members it needs and skips any that are
+      # already extracted with the right size and pin (unixnu/ipsw.py extract()),
+      # so the cache turns the eleven-minute download into a copy. Bump v1 when
+      # board.toml [ipsw] changes version, build or sha256 pins.
+      - name: ipsw cache
+        uses: actions/cache@v4
+        with:
+          path: UniXNU/out/ipsw
+          key: ipsw-21H461-v1
+          restore-keys: |
+            ipsw-21H461-
       - name: tools
         run: |
           brew install dtc llvm lld cmake mtools openssl@3 blacktop/tap/ipsw
