@@ -1,0 +1,65 @@
+--- a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoDtb.c
++++ b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoDtb.c
+@@ -71,7 +71,53 @@
+   return Dtb;
+ }
+ 
++//
++// The UFS stream's SMMU entry, put in bypass before the OS starts.
++//
++// HALIOMMU leaves every stream it configured pointing at a translation context
++// bank which it then disables (SCTLR = 0), so after ExitBootServices nothing the
++// UFS controller issues is answered: the doorbell reads set, IS stays clear and
++// no descriptor is ever fetched. The kernel cannot repair that - a single S2CR
++// write from there resets this part - but firmware can, and firmware is the only
++// place where the write is legal.
++//
++// Stream 0x60 is the UFS host (ufshc@1d84000 iommus = <&apps_smmu 0x60 0>).
++// Bypass makes the controller's own physical addresses the ones the SMMU uses,
++// which is what a UEFI storage driver hands it anyway.
++//
++STATIC
+ VOID
++PianoSmmuUfsBypass (
++  VOID
++  )
++{
++  volatile UINT32  *Smmu;
++  UINT32            Id0;
++  UINT32            NumSmrg;
++  UINT32            Index;
++
++  Smmu    = (volatile UINT32 *)(UINTN)0x15000000;
++  Id0     = Smmu[0x20 / 4];                 // GR0_ID0
++  NumSmrg = Id0 & 0xFF;                     // NUMSMRG
++
++  for (Index = 0; Index < NumSmrg; Index++) {
++    UINT32 Smr  = Smmu[(0x800 + 4 * Index) / 4];
++    UINT32 S2cr = Smmu[(0xC00 + 4 * Index) / 4];
++
++    if (((Smr & 0x80000000U) == 0) || ((Smr & 0xFFFF) != 0x60)) {
++      continue;
++    }
++
++    Smmu[(0xC00 + 4 * Index) / 4] = 2U << 16;   // S2CR type 2: bypass
++    __asm__ volatile ("dsb sy" ::: "memory");
++    Print (L"piano: UFS stream %u to bypass (smr=%08x s2cr was %08x)\r\n", Index, Smr, S2cr);
++    return;
++  }
++
++  Print (L"piano: no valid SMMU entry for stream 0x60 (id0=%08x)\r\n", Id0);
++}
++
++VOID
+ PianoDtbInstall (
+   VOID
+   )
+@@ -82,6 +128,8 @@
+   EFI_SIMPLE_FILE_SYSTEM_PROTOCOL  *Fs;
+   EFI_FILE_PROTOCOL                *Root;
+   VOID                             *Dtb;
++
++  PianoSmmuUfsBypass ();
+ 
+   if (EFI_ERROR (gBS->LocateHandleBuffer (ByProtocol, &gEfiSimpleFileSystemProtocolGuid, NULL, &Count, &Handles))) {
+     return;
