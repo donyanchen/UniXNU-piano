@@ -1,20 +1,21 @@
 diff --git a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
-index c33f959..3329f6f 100644
+index c33f959..2018a91 100644
 --- a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
 +++ b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
-@@ -139,6 +139,67 @@ DeviceBootManagerBeforeConsole (
+@@ -139,6 +139,36 @@ DeviceBootManagerBeforeConsole (
    return NULL;
  }
  
 +//
-+// Probe the SMMU before the OS starts, and put the UFS stream in bypass if the
-+// block answers at all.
++// Turn the SMMU off for the OS that starts next.
 +//
-+// A single S2CR store resets the board from the kernel, and the firmware
-+// attempt crashed with a synchronous exception before its first Print, so the
-+// open question is whether the whole block is unreachable by then. Every step
-+// prints before it touches the next register, so the next screen says how far
-+// it got.
++// The UFS stream's own S2CR cannot be rewritten here - a single store resets
++// the board - so this variant takes the coarser route: clear SCR0.SMMUEN, which
++// makes every client bypass the SMMU. Physical addresses then reach memory
++// unchanged, which is what the controller hands it anyway.
++//
++// Stream 0x60 is the UFS host (ufshc@1d84000 iommus = <&apps_smmu 0x60 0>).
++// This runs after the payload has been read from the partition.
 +//
 +STATIC
 +VOID
@@ -24,53 +25,21 @@ index c33f959..3329f6f 100644
 +{
 +  volatile UINT32  *Smmu;
 +  UINT32            Scr0;
-+  UINT32            Id0;
-+  UINT32            Index;
-+  UINT32            NumSmrg;
 +
-+  Print (L"piano: smmu probe start\r\n");
 +  Smmu = (volatile UINT32 *)(UINTN)0x15000000;
++  Scr0 = Smmu[0x00 / 4];                    // GR0_sCR0
++  Print (L"piano: scr0 was %08x\r\n", Scr0);
 +
-+  Scr0 = Smmu[0x00 / 4];
-+  Print (L"piano: smmu scr0=%08x\r\n", Scr0);
++  Smmu[0x00 / 4] = Scr0 & ~1U;              // SMMUEN = 0: every client bypasses
++  __asm__ volatile ("dsb sy" ::: "memory");
 +
-+  Id0 = Smmu[0x20 / 4];
-+  Print (L"piano: smmu id0=%08x\r\n", Id0);
-+
-+  NumSmrg = Id0 & 0xFF;
-+  if ((NumSmrg == 0) || (NumSmrg > 128)) {
-+    Print (L"piano: smmu id0 unusable, giving up\r\n");
-+    return;
-+  }
-+
-+  for (Index = 0; Index < NumSmrg; Index++) {
-+    UINT32 Smr = Smmu[(0x800 + 4 * Index) / 4];
-+
-+    if (((Smr & 0x80000000U) == 0) || ((Smr & 0xFFFF) != 0x60)) {
-+      continue;
-+    }
-+
-+    Print (L"piano: smmu stream %u smr=%08x s2cr=%08x\r\n",
-+           Index, Smr, Smmu[(0xC00 + 4 * Index) / 4]);
-+
-+    Smmu[(0x800 + 4 * Index) / 4] = Smr & ~0x80000000U;
-+    __asm__ volatile ("dsb sy" ::: "memory");
-+    Smmu[(0xC00 + 4 * Index) / 4] = 2U << 16;
-+    __asm__ volatile ("dsb sy" ::: "memory");
-+    Smmu[(0x800 + 4 * Index) / 4] = Smr | 0x80000000U;
-+    __asm__ volatile ("dsb sy" ::: "memory");
-+
-+    Print (L"piano: smmu s2cr now %08x\r\n", Smmu[(0xC00 + 4 * Index) / 4]);
-+    return;
-+  }
-+
-+  Print (L"piano: smmu no stream 0x60 among %u entries\r\n", NumSmrg);
++  Print (L"piano: scr0 now %08x\r\n", Smmu[0x00 / 4]);
 +}
 +
  EFI_DEVICE_PATH_PROTOCOL**
  EFIAPI
  DeviceBootManagerAfterConsole ()
-@@ -173,6 +234,8 @@ DeviceBootManagerAfterConsole ()
+@@ -173,6 +203,8 @@ DeviceBootManagerAfterConsole ()
    // twenty-second window made every attempt a race with the enumeration.
    PianoFastbootWaitPayload (180000);
  
