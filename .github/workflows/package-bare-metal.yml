@@ -180,7 +180,6 @@ jobs:
           # The kernel writes its bring-up stage to a fixed RAM page before each UFS
           # step; the firmware patch above reports it on the next boot.
           python3 ../device/scripts/prepare-shengufs-deathlog.py out
-          python3 ../device/scripts/prepare-shengufs-smmu-bypass.py out
           # Bisect probe: stop right after the SMMU bypass write. A reset with no
           # message means the write itself is fatal on this part; a panic means the
           # writes landed and the fault is downstream (request-list DMA).
