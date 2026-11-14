@@ -13,7 +13,11 @@ and every legacy write reads back what was written.
 
 The SMMU cannot be reprogrammed from the kernel here - a single S2CR write
 resets the board - so stay inside the window instead. inTaskWithPhysicalMask
-asks the allocator for memory whose physical address fits the mask.
+asks the allocator for memory whose physical address fits the mask. The call
+takes four arguments: inTask, options, capacity, physicalMask. Alignment is not
+a parameter - passing one is a compile error, and because the component failure
+stops the archive list, the symptom shows up much later as
+"_native_verified_root_probe, referenced from _bsd_init".
 
 usage: prepare-shengufs-low-dma.py <build tree root>
 SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -37,7 +41,7 @@ NEW = """  // The stream map is the identity window the previous OS built, and e
   gHost.dma = IOBufferMemoryDescriptor::inTaskWithPhysicalMask (
     kernel_task, static_cast<IOOptionBits> (kIODirectionInOut) | static_cast<IOOptionBits> (kIOMemoryPhysicallyContiguous) |
     static_cast<IOOptionBits> (kIOMemoryMapperNone),
-    kDmaBytes, 0xFFFFF000ULL, 4096);"""
+    kDmaBytes, 0xFFFFF000ULL);"""
 
 
 def main() -> int:
