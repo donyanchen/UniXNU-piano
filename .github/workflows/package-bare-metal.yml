@@ -177,11 +177,10 @@ jobs:
           # Leave the SMMU untouched and send the first command from the firmware's
           # own request list: writing S2CR resets this SoC even in bypass.
           python3 ../device/scripts/prepare-shengufs-adopt-nosmmu.py out
-          # The measured hcs=0000010F->00000008 says the controller did start
-          # its own init sequence, so run hba_enable, link_startup and
-          # make_hba_operational in ufshcd order instead of stopping at the
-          # first read that is not ready yet.
-          python3 ../device/scripts/prepare-shengufs-hba-reset.py out
+          # The queue takeover prints what the controller did with the list base
+          # and the run-stop bit; HCE cannot be cycled before it, because
+          # hostStopQueue refuses to run when HCE is clear.
+          python3 ../device/scripts/prepare-shengufs-queue-print.py out
           python3 ../device/scripts/prepare-shengufs-pmc-reset.py out
           # The kernel writes its bring-up stage to a fixed RAM page before each UFS
           # step; the firmware patch above reports it on the next boot.
