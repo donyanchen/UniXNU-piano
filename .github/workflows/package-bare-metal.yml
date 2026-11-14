@@ -40,6 +40,16 @@ jobs:
       # already extracted with the right size and pin (unixnu/ipsw.py extract()),
       # so the cache turns the eleven-minute download into a copy. Bump v1 when
       # board.toml [ipsw] changes version, build or sha256 pins.
+      # ipsw fetch range-reads only the members it needs and skips any that are
+      # already extracted with the right size and pin (unixnu/ipsw.py extract()),
+      # so the cache turns an eleven-minute fetch into a copy.
+      - name: ipsw cache
+        uses: actions/cache@v4
+        with:
+          path: UniXNU/out/ipsw
+          key: ipsw-21H461-v2
+          restore-keys: |
+            ipsw-21H461-
       - name: tools
         run: |
           brew install dtc llvm lld cmake mtools openssl@3 blacktop/tap/ipsw
