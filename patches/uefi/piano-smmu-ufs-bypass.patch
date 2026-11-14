@@ -1,8 +1,8 @@
 diff --git a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
-index c33f959..80d73fd 100644
+index c33f959..40b92b0 100644
 --- a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
 +++ b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
-@@ -139,6 +139,92 @@ DeviceBootManagerBeforeConsole (
+@@ -139,6 +139,108 @@ DeviceBootManagerBeforeConsole (
    return NULL;
  }
  
@@ -86,6 +86,22 @@ index c33f959..80d73fd 100644
 +    __asm__ volatile ("dsb sy" ::: "memory");
 +
 +    Print (L"piano: UFS stream %u to bypass (smr=%08x s2cr was %08x bank %u)\r\n", Index, Smr, S2cr, Bank);
++
++    // Did the entry take it? A type-0 S2CR reads back as 0x00000000-0x000000ff;
++    // bypass must read as 0x00020000 with every other field clear.
++    if ((Smmu[(0xC00 + 4 * Index) / 4] & 0x3FFFFU) != (2U << 16)) {
++      UINT32 Scr0 = Smmu[0x00 / 4];
++
++      // The stream refused bypass. Fall back to disabling the SMMU itself:
++      // SMMUEN = 0 with CLIENTPD = 0 makes every client bypass it, which is the
++      // same outcome at a coarser grain. If this also fails, the registers are
++      // simply not writable from the non-secure world on this part.
++      Print (L"piano: s2cr stuck at %08x, disabling the SMMU (scr0 was %08x)\r\n",
++             Smmu[(0xC00 + 4 * Index) / 4], Scr0);
++      Smmu[0x00 / 4] = Scr0 & ~1U;
++      __asm__ volatile ("dsb sy" ::: "memory");
++      Print (L"piano: scr0 now %08x\r\n", Smmu[0x00 / 4]);
++    }
 +    return;
 +  }
 +
@@ -95,7 +111,7 @@ index c33f959..80d73fd 100644
  EFI_DEVICE_PATH_PROTOCOL**
  EFIAPI
  DeviceBootManagerAfterConsole ()
-@@ -173,6 +259,8 @@ DeviceBootManagerAfterConsole ()
+@@ -173,6 +275,8 @@ DeviceBootManagerAfterConsole ()
    // twenty-second window made every attempt a race with the enumeration.
    PianoFastbootWaitPayload (180000);
  
