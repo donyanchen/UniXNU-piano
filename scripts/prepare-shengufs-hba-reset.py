@@ -53,12 +53,15 @@ SOLUTION = """  //
     uint32_t hceRaw;
 
     // ---- ufshcd_hba_enable: stop, then let the controller init itself ----
+    printf ("UFS[1] entry          hcs=%08x hce=%08x is=%08x\n",
+            read32 (hc, 0x30), read32 (hc, 0x34), read32 (hc, 0x20));
     if (read32 (hc, 0x34) & 1) {
       write32 (hc, 0x34, 0);                     // CONTROLLER_ENABLE = 0
       for (unsigned spin = 0; spin < 200000; spin++) {
         if ((read32 (hc, 0x34) & 1) == 0) break;
         IODelay (10);
       }
+      printf ("UFS[2] HCE->0         hce=%08x\n", read32 (hc, 0x34));
       if (read32 (hc, 0x34) & 1) {
         panic ("NATIVE_UFS hba: HCE would not clear hce=%08x hcs=%08x",
                read32 (hc, 0x34), read32 (hc, 0x30));
@@ -74,12 +77,15 @@ SOLUTION = """  //
       IODelay (10);
     }
     hceRaw = read32 (hc, 0x34);
+    printf ("UFS[3] HCE=1 settled     hce=%08x hcs=%08x\n",
+            hceRaw, read32 (hc, 0x30));
     if ((hceRaw & 1) == 0) {
       panic ("NATIVE_UFS hba: controller never enabled hce=%08x hcs=%08x is=%08x",
              hceRaw, read32 (hc, 0x30), read32 (hc, 0x20));
     }
 
     // ---- ufshcd_link_startup: UIC DME_LINKSTARTUP, then IS.UCCS ----
+    printf ("UFS[4] LINKSTARTUP pre   hcs=%08x\n", read32 (hc, 0x30));
     write32 (hc, 0x44, 0);                       // UCMDARG1
     write32 (hc, 0x48, 0);                       // UCMDARG2
     write32 (hc, 0x4C, 0);                       // UCMDARG3
@@ -92,6 +98,7 @@ SOLUTION = """  //
       uint32_t isLink = read32 (hc, 0x20);
       uint32_t argLink = read32 (hc, 0x48);
       uint32_t hcsLink = read32 (hc, 0x30);
+      printf ("UFS[5] LINKSTARTUP post  is=%08x arg=%08x hcs=%08x\n", isLink, argLink, hcsLink);
       write32 (hc, 0x20, 4);                     // clear IS.UCCS
       if ((isLink & 4) == 0) {
         panic ("NATIVE_UFS hba: LINKSTARTUP never completed is=%08x arg=%08x hcs=%08x",
@@ -106,6 +113,7 @@ SOLUTION = """  //
     // ---- ufshcd_make_hba_operational ----
     write32 (hc, 0x24, 0x0000FFFF);              // IE: every interrupt source
     write32 (hc, 0x38, 0);                       // no interrupt aggregation
+    printf ("UFS[6] IE written        ie=%08x\n", read32 (hc, 0x24));
     write32 (hc, 0x50, static_cast<uint32_t> (phys));
     write32 (hc, 0x54, static_cast<uint32_t> (phys >> 32));
     write32 (hc, 0x70, static_cast<uint32_t> (phys));
@@ -113,7 +121,12 @@ SOLUTION = """  //
     {
       uint32_t baseL = read32 (hc, 0x50);
       uint32_t baseH = read32 (hc, 0x54);
+      uint32_t tmrbL = read32 (hc, 0x70);
       uint32_t hcsOp = read32 (hc, 0x30);
+      printf ("UFS[7] UTMRBA            want=%08x got=%08x\n",
+              static_cast<uint32_t> (phys), tmrbL);
+      printf ("UFS[8] UTRLBA            want=%08x/%08x got=%08x/%08x hcs=%08x\n",
+              static_cast<uint32_t> (phys), static_cast<uint32_t> (phys >> 32), baseL, baseH, hcsOp);
       if ((baseL != static_cast<uint32_t> (phys)) ||
           (baseH != static_cast<uint32_t> (phys >> 32))) {
         panic ("NATIVE_UFS hba: UTRLBA did not take want=%08x/%08x got=%08x/%08x",
@@ -126,6 +139,8 @@ SOLUTION = """  //
     }
     write32 (hc, 0x64, 1);                       // UTMRRSR
     write32 (hc, 0x60, 1);                       // UTRLRSR
+    printf ("UFS[9] run-stop done     rsr=%08x tmrsr=%08x hcs=%08x db=%08x\n",
+            read32 (hc, 0x60), read32 (hc, 0x64), read32 (hc, 0x30), read32 (hc, 0x58));
     if (((read32 (hc, 0x60) & 1) == 0) || ((read32 (hc, 0x64) & 1) == 0)) {
       panic ("NATIVE_UFS hba: run-stop refused utrlrsr=%08x utmrrsr=%08x hcs=%08x",
              read32 (hc, 0x60), read32 (hc, 0x64), read32 (hc, 0x30));
