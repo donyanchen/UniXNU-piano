@@ -238,7 +238,7 @@ WAIT_EARLY2_NEW = """  if (mVolumeReady) {
   // boot with the payload already written never waits for a host at all.
   //
   if (!EFI_ERROR (PayloadFromDisk ()) && !EFI_ERROR (PublishVolume ())) {
-    Print (L"fastboot: payload volume published from storage\n");
+    Print (L"fastboot: payload volume published from storage\\n");
     return TRUE;
   }
 """
@@ -311,7 +311,6 @@ def main() -> int:
         (BASE_OLD, BASE_NEW, "publish base"),
         (GEOM_OLD, GEOM_NEW, "publish geometry"),
         (LASTBLOCK_OLD, LASTBLOCK_NEW, "publish last block"),
-        (TIMEOUT_OLD, TIMEOUT_NEW, "payload window 80 s"),
         (WAIT_EARLY2_OLD, WAIT_EARLY2_NEW, "storage first"),
         (WAIT_EARLY_OLD, WAIT_EARLY_NEW, "no-channel fallback"),
         (WAIT_OLD, WAIT_NEW, "wait fallback"),
@@ -322,6 +321,18 @@ def main() -> int:
         text = text.replace(old, new, 1)
 
     path.write_text(text, encoding="utf-8", errors="surrogateescape")
+
+    # The payload window lives in the boot manager, not in PianoFastboot.c.
+    other = pathlib.Path(args.root) / TARGET.replace("PianoFastboot.c", "DeviceBootManager.c")
+    if other.exists():
+        otext = other.read_text(encoding="utf-8", errors="surrogateescape")
+        if TIMEOUT_OLD in otext:
+            other.write_text(otext.replace(TIMEOUT_OLD, TIMEOUT_NEW, 1),
+                             encoding="utf-8", errors="surrogateescape")
+            print(f"  {other}: payload window 80 s")
+        elif TIMEOUT_NEW not in otext:
+            print("  !! payload window anchor not found", file=sys.stderr)
+            return 1
     print(f"  {path}: payload volume can come from storage")
     return 0
 
