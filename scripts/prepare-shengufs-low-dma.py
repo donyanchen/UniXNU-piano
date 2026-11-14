@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-"""Ask for a DMA buffer below 4 GiB, whatever CAP.64AS says.
+"""Ask for the DMA buffer below 4 GiB, whatever CAP.64AS says.
 
-The controller advertises 64-bit addressing (CAP bit 24, 0x01000000, set in
-0xd5c7031f), so hostBringUp() allocates the request list and its buffers without
-an upper bound and the run lands at 0x9cc5e2000 - above 4 GiB.
+hostBringUp() allocates with inTaskWithOptions() and only validates the result
+afterwards, so on a controller that advertises 64-bit addressing (CAP bit 24 is
+set in 0xd5c7031f) the request list lands at 0x9cc5e2000, above 4 GiB.
 
-The stream's SMMU entry is the one firmware left behind, and the table behind it
-was built by the previous OS for its own buffers, which were all below 4 GiB.
-Any transaction the controller issues to an address outside that window is
-never answered, which is exactly the measured shape: the doorbell reads set, IS
-stays clear and no descriptor is ever fetched, with every legacy write reading
-back what was written.
+The stream's SMMU entry is the one firmware leaves behind, built by the previous
+OS for its own buffers, and every one of those sat below 4 GiB. A transaction to
+an address outside that window is never answered, which is exactly the measured
+shape: the doorbell reads set, IS stays clear, no descriptor is ever fetched,
+and every legacy write reads back what was written.
 
-The SMMU cannot be reprogrammed from the kernel on this part - a single S2CR
-write resets the board - so the cheapest way to test the window is to stay
-inside it. This patch asks for a low buffer and leaves the SMMU alone.
+The SMMU cannot be reprogrammed from the kernel here - a single S2CR write
+resets the board - so stay inside the window instead. inTaskWithPhysicalMask
+asks the allocator for memory whose physical address fits the mask.
 
 usage: prepare-shengufs-low-dma.py <build tree root>
 SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -23,15 +22,22 @@ import argparse
 import pathlib
 import sys
 
-MARKER = "Ask for a low buffer instead"
+MARKER = "inTaskWithPhysicalMask"
 
-OLD = "  const bool wide = read32 (gHost.hc, 0) & 0x01000000;"
+OLD = """  gHost.dma = IOBufferMemoryDescriptor::inTaskWithOptions (
+    kernel_task, static_cast<IOOptionBits> (kIODirectionInOut) | static_cast<IOOptionBits> (kIOMemoryPhysicallyContiguous) |
+    static_cast<IOOptionBits> (kIOMemoryMapperNone),
+    kDmaBytes, 4096);"""
 
 NEW = """  // The stream map is the identity window the previous OS built, and every
   // buffer it described sat below 4 GiB. Ask for a low buffer instead of
   // trusting CAP.64AS: an address outside that window is never answered, and
-  // the controller then never fetches a descriptor at all.
-  const bool wide = false;"""
+  // the controller then never fetches a descriptor at all. The SMMU itself
+  // cannot be touched from here - one S2CR write resets this part.
+  gHost.dma = IOBufferMemoryDescriptor::inTaskWithPhysicalMask (
+    kernel_task, static_cast<IOOptionBits> (kIODirectionInOut) | static_cast<IOOptionBits> (kIOMemoryPhysicallyContiguous) |
+    static_cast<IOOptionBits> (kIOMemoryMapperNone),
+    kDmaBytes, 0xFFFFF000ULL, 4096);"""
 
 
 def main() -> int:
@@ -49,11 +55,11 @@ def main() -> int:
             patched += 1
             continue
         if OLD not in text:
-            print(f"  !! {path}: wide anchor not found", file=sys.stderr)
+            print(f"  !! {path}: DMA allocation anchor not found", file=sys.stderr)
             continue
         path.write_text(text.replace(OLD, NEW, 1))
         patched += 1
-        print(f"  {path}: DMA buffers kept below 4 GiB")
+        print(f"  {path}: DMA buffer requested below 4 GiB")
 
     if not patched:
         print("  !! NativeUfs.cpp not found", file=sys.stderr)
