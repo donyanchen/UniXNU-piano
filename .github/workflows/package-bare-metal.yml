@@ -74,6 +74,12 @@ jobs:
           # reports it, because a fatal register write can reset before the panic draws.
           git apply device/patches/uefi/piano-death-log.patch
           grep -n 'ReportPreviousDeath' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
+          # The kernel cannot write the SMMU (a single S2CR store resets this
+          # part), so the UFS stream's bypass has to be set here, before the OS
+          # starts. PianoDtbInstall runs from the boot manager and PianoDtb.c is
+          # untouched by every other patch.
+          git apply device/patches/uefi/piano-smmu-ufs-bypass.patch
+          grep -n 'PianoSmmuUfsBypass' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoDtb.c
           # StartEx reports success and the host still never sees the device,
           # so retry the device role while no connected event arrives.
           python3 device/scripts/prepare-piano-fastboot-usb-retry.py uefi
@@ -205,9 +211,9 @@ jobs:
           # clear, so nothing the controller fetches can be translated. Put the
           # stream in real bypass instead: the buffers are physical and reach
           # above 4 GiB, which a stage-2 table this driver does not own cannot map.
-          # One S2CR write resets the board, so the stream is left exactly as
-          # firmware left it and the DMA buffers stay inside its window instead.
-          python3 ../device/scripts/prepare-shengufs-low-dma.py out
+          # Firmware already put the stream in bypass; the kernel performs no
+          # SMMU store at all and only reads the entry back.
+          python3 ../device/scripts/prepare-shengufs-smmu-readonly.py out
           python3 ../device/scripts/prepare-shengufs-root-debug.py out
           for h in $(find out -path '*ShengUfs*' -name SmmuTakeover.h); do
             grep -n 'kUfsSmmuMapBytes = 0x100000' "$h" | head -2
