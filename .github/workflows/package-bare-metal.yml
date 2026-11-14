@@ -75,11 +75,12 @@ jobs:
           git apply device/patches/uefi/piano-death-log.patch
           grep -n 'ReportPreviousDeath' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoFastboot.c
           # The kernel cannot write the SMMU (a single S2CR store resets this
-          # part), so the UFS stream's bypass has to be set here, before the OS
-          # starts. PianoDtbInstall runs from the boot manager and PianoDtb.c is
-          # untouched by every other patch.
+          # part), so the stream's bypass is set here - after the payload has
+          # been read from the partition and before UniXNU starts. It has to be
+          # after that read: UEFI's own UFS driver uses the translated IOVAs
+          # through the same bank, so switching it earlier breaks the read.
           git apply device/patches/uefi/piano-smmu-ufs-bypass.patch
-          grep -n 'PianoSmmuUfsBypass' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoDtb.c
+          grep -n 'PianoSmmuUfsBypass' uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
           # StartEx reports success and the host still never sees the device,
           # so retry the device role while no connected event arrives.
           python3 device/scripts/prepare-piano-fastboot-usb-retry.py uefi
