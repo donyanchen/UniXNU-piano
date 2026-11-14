@@ -1,25 +1,30 @@
---- a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoDtb.c
-+++ b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/PianoDtb.c
-@@ -71,7 +71,53 @@
-   return Dtb;
+diff --git a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
+index c33f959..3f462f4 100644
+--- a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
++++ b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
+@@ -139,6 +139,55 @@ DeviceBootManagerBeforeConsole (
+   return NULL;
  }
  
 +//
-+// The UFS stream's SMMU entry, put in bypass before the OS starts.
++// Put the UFS stream in S2 bypass, for the OS that starts next.
 +//
-+// HALIOMMU leaves every stream it configured pointing at a translation context
-+// bank which it then disables (SCTLR = 0), so after ExitBootServices nothing the
-+// UFS controller issues is answered: the doorbell reads set, IS stays clear and
-+// no descriptor is ever fetched. The kernel cannot repair that - a single S2CR
-+// write from there resets this part - but firmware can, and firmware is the only
-+// place where the write is legal.
++// HALIOMMU leaves every stream it configured on a translation context bank that
++// it then disables (SCTLR = 0), so after ExitBootServices nothing the UFS
++// controller issues is answered: the doorbell reads set, IS stays clear and no
++// descriptor is ever fetched. The kernel cannot repair that - one S2CR store
++// from there resets this part - while firmware can, and firmware is where
++// HALIOMMU writes the same registers.
 +//
 +// Stream 0x60 is the UFS host (ufshc@1d84000 iommus = <&apps_smmu 0x60 0>).
-+// Bypass makes the controller's own physical addresses the ones the SMMU uses,
-+// which is what a UEFI storage driver hands it anyway.
++// Bypass makes the controller's physical addresses the ones the SMMU uses.
++//
++// This must run after the payload has been read from the partition: until then
++// UEFI's own UFS driver is using the translated IOVAs through that bank, and
++// switching the stream underneath it breaks the read.
 +//
 +STATIC
- VOID
++VOID
 +PianoSmmuUfsBypass (
 +  VOID
 +  )
@@ -50,16 +55,15 @@
 +  Print (L"piano: no valid SMMU entry for stream 0x60 (id0=%08x)\r\n", Id0);
 +}
 +
-+VOID
- PianoDtbInstall (
-   VOID
-   )
-@@ -82,6 +128,8 @@
-   EFI_SIMPLE_FILE_SYSTEM_PROTOCOL  *Fs;
-   EFI_FILE_PROTOCOL                *Root;
-   VOID                             *Dtb;
-+
-+  PianoSmmuUfsBypass ();
+ EFI_DEVICE_PATH_PROTOCOL**
+ EFIAPI
+ DeviceBootManagerAfterConsole ()
+@@ -173,6 +222,8 @@ DeviceBootManagerAfterConsole ()
+   // twenty-second window made every attempt a race with the enumeration.
+   PianoFastbootWaitPayload (180000);
  
-   if (EFI_ERROR (gBS->LocateHandleBuffer (ByProtocol, &gEfiSimpleFileSystemProtocolGuid, NULL, &Count, &Handles))) {
-     return;
++  PianoSmmuUfsBypass ();
++
+   // UniXNU owns the boot menu when the board builds it into the volume: it
+   // publishes the payload volume, offers its entries and starts XNU. It only
+   // returns when it cannot run, so the ESP loader and Android stay as the
