@@ -1,8 +1,8 @@
 diff --git a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
-index c33f959..3f462f4 100644
+index c33f959..80d73fd 100644
 --- a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
 +++ b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
-@@ -139,6 +139,55 @@ DeviceBootManagerBeforeConsole (
+@@ -139,6 +139,92 @@ DeviceBootManagerBeforeConsole (
    return NULL;
  }
  
@@ -16,12 +16,16 @@ index c33f959..3f462f4 100644
 +// from there resets this part - while firmware can, and firmware is where
 +// HALIOMMU writes the same registers.
 +//
-+// Stream 0x60 is the UFS host (ufshc@1d84000 iommus = <&apps_smmu 0x60 0>).
-+// Bypass makes the controller's physical addresses the ones the SMMU uses.
++// The store follows arm_smmu_write_sme(): the stream-match entry is invalidated
++// first, the S2CR is written while nothing matches it, the entry is made valid
++// again, and the context bank's TLB is flushed. Writing S2CR while the entry is
++// valid asks the SMMU to change the routing of a stream that may have
++// transactions in flight, which the architecture does not define.
 +//
-+// This must run after the payload has been read from the partition: until then
-+// UEFI's own UFS driver is using the translated IOVAs through that bank, and
-+// switching the stream underneath it breaks the read.
++// Stream 0x60 is the UFS host (ufshc@1d84000 iommus = <&apps_smmu 0x60 0>).
++//
++// This runs after the payload has been read from the partition: until then
++// UEFI's own UFS driver uses the translated IOVAs through that bank.
 +//
 +STATIC
 +VOID
@@ -31,24 +35,57 @@ index c33f959..3f462f4 100644
 +{
 +  volatile UINT32  *Smmu;
 +  UINT32            Id0;
++  UINT32            Id1;
 +  UINT32            NumSmrg;
++  UINT32            PageShift;
++  UINT32            NumPage;
 +  UINT32            Index;
 +
-+  Smmu    = (volatile UINT32 *)(UINTN)0x15000000;
-+  Id0     = Smmu[0x20 / 4];                 // GR0_ID0
-+  NumSmrg = Id0 & 0xFF;                     // NUMSMRG
++  Smmu      = (volatile UINT32 *)(UINTN)0x15000000;
++  Id0       = Smmu[0x20 / 4];               // GR0_ID0
++  Id1       = Smmu[0x24 / 4];               // GR0_ID1
++  NumSmrg   = Id0 & 0xFF;                   // NUMSMRG
++  PageShift = ((Id1 & 0x80000000U) != 0) ? 16 : 12;
++  NumPage   = 1U << (((Id1 >> 28) & 0x7) + 1);
 +
 +  for (Index = 0; Index < NumSmrg; Index++) {
 +    UINT32 Smr  = Smmu[(0x800 + 4 * Index) / 4];
 +    UINT32 S2cr = Smmu[(0xC00 + 4 * Index) / 4];
++    UINT32 Bank;
++    UINT32 Spin;
 +
 +    if (((Smr & 0x80000000U) == 0) || ((Smr & 0xFFFF) != 0x60)) {
 +      continue;
 +    }
 +
-+    Smmu[(0xC00 + 4 * Index) / 4] = 2U << 16;   // S2CR type 2: bypass
++    Bank = S2cr & 0xFF;
++
++    // 1. invalidate the entry so nothing matches the stream while S2CR changes
++    Smmu[(0x800 + 4 * Index) / 4] = Smr & ~0x80000000U;
 +    __asm__ volatile ("dsb sy" ::: "memory");
-+    Print (L"piano: UFS stream %u to bypass (smr=%08x s2cr was %08x)\r\n", Index, Smr, S2cr);
++
++    // 2. bypass: the controller's own physical addresses are what the SMMU uses
++    Smmu[(0xC00 + 4 * Index) / 4] = 2U << 16;
++    __asm__ volatile ("dsb sy" ::: "memory");
++
++    // 3. re-enable the entry
++    Smmu[(0x800 + 4 * Index) / 4] = Smr | 0x80000000U;
++    __asm__ volatile ("dsb sy" ::: "memory");
++
++    // 4. drop whatever the context bank cached for this stream
++    {
++      volatile UINT32 *Cb = Smmu + ((NumPage + Bank) << PageShift);
++      Cb[0x618 / 4] = 0;                    // TLBIALL
++      Cb[0x7F0 / 4] = 0;                    // TLBSYNC
++      for (Spin = 0; Spin < 100000; Spin++) {
++        if ((Cb[0x7F4 / 4] & 1) == 0) {
++          break;
++        }
++      }
++    }
++    __asm__ volatile ("dsb sy" ::: "memory");
++
++    Print (L"piano: UFS stream %u to bypass (smr=%08x s2cr was %08x bank %u)\r\n", Index, Smr, S2cr, Bank);
 +    return;
 +  }
 +
@@ -58,7 +95,7 @@ index c33f959..3f462f4 100644
  EFI_DEVICE_PATH_PROTOCOL**
  EFIAPI
  DeviceBootManagerAfterConsole ()
-@@ -173,6 +222,8 @@ DeviceBootManagerAfterConsole ()
+@@ -173,6 +259,8 @@ DeviceBootManagerAfterConsole ()
    // twenty-second window made every attempt a race with the enumeration.
    PianoFastbootWaitPayload (180000);
  
