@@ -82,8 +82,8 @@ SOLUTION = """  //
         uint32_t isLink = read32 (hc, 0x20), argLink = read32 (hc, 0x48);
         write32 (hc, 0x20, 4);
         if (read32 (hc, 0x30) & 8) {
-          panic ("NATIVE_UFS adopt: UIC refused\n"
-                 "hcs=%08x->%08x is=%08x arg=%08x\n"
+          panic ("NATIVE_UFS adopt: UIC refused\\n"
+                 "hcs=%08x->%08x is=%08x arg=%08x\\n"
                  "hiber is=%08x arg=%08x / endp is=%08x arg=%08x / link is=%08x arg=%08x",
                  hcsRaw, read32 (hc, 0x30), isReset, argReset,
                  isHiber, argHiber, isEndp, argEndp, isLink, argLink);
