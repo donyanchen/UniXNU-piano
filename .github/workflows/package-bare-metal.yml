@@ -177,6 +177,9 @@ jobs:
           # Leave the SMMU untouched and send the first command from the firmware's
           # own request list: writing S2CR resets this SoC even in bypass.
           python3 ../device/scripts/prepare-shengufs-adopt-nosmmu.py out
+          # Mainline never adopts the loader's controller state: reset, program
+          # both request lists, start them, then start the link.
+          python3 ../device/scripts/prepare-shengufs-hba-reset.py out
           python3 ../device/scripts/prepare-shengufs-pmc-reset.py out
           # The kernel writes its bring-up stage to a fixed RAM page before each UFS
           # step; the firmware patch above reports it on the next boot.
