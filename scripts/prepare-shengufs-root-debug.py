@@ -30,10 +30,13 @@ NEW_BRINGUP = """  if (!hostBringUp (&why)) {
     uint32_t fsr = gHost.cb ? read32 (gHost.cb, 0x58) : 0;
     panic ("NATIVE_UFS root: bring-up failed: %s\\n"
            "hcs=%08x ulss=%u hce=%08x is=%08x db=%08x rsr=%08x\\n"
+           "ver=%08x cap=%08x memcfg=%08x ie=%08x utmrba=%08x utmrsr=%08x\\n"
            "utrl=%llx dma=%llx ocs=%02x polls=%u dbSeen=%x isSeen=%x\\n"
            "cmd n=%u type=%02x op=%02x lun=%02x rsp=%08x proto=%u\\n"
            "smmu smr=%08x s2cr=%08x cbar=%08x sctlr=%08x fault g=%08x cb=%08x",
            why, hcs, (hcs >> 8) & 0x3, hce, isReg, dbReg, rsrReg,
+           read32 (hc, 0x08), read32 (hc, 0x00), read32 (hc, 0x300),
+           read32 (hc, 0x24), read32 (hc, 0x70), read32 (hc, 0x80),
            (unsigned long long) utrl, (unsigned long long) gRootDiagnostic.dma,
            gRootDiagnostic.ocs, gRootDiagnostic.polls, gRootDiagnostic.dbSeen, gRootDiagnostic.isSeen,
            gRootDiagnostic.command, gRootDiagnostic.type, gRootDiagnostic.opcode, gRootDiagnostic.lun,
