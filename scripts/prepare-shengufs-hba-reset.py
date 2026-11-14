@@ -27,7 +27,7 @@ SOLUTION = """  //
   {
     uint32_t hcsRaw = read32 (hc, 0x30);
     write32 (hc, 0x34, 0);                       // HCE = 0
-    for (unsigned spin = 0; spin < 10000; spin++) {
+    for (unsigned spin = 0; spin < 200000; spin++) {
       if ((read32 (hc, 0x34) & 1) == 0) break;
       IODelay (10);
     }
@@ -36,11 +36,11 @@ SOLUTION = """  //
     write32 (hc, 0x70, static_cast<uint32_t> (phys));
     write32 (hc, 0x74, static_cast<uint32_t> (phys >> 32));
     write32 (hc, 0x34, 1);                       // HCE = 1
-    for (unsigned spin = 0; spin < 10000; spin++) {
+    for (unsigned spin = 0; spin < 500000; spin++) {
       if (read32 (hc, 0x30) & 1) break;          // UCRDY
       IODelay (10);
     }
-    for (unsigned spin = 0; spin < 10000; spin++) {
+    for (unsigned spin = 0; spin < 500000; spin++) {
       if ((read32 (hc, 0x30) & 6) == 6) break;   // UTRLRDY | UTMRDY
       IODelay (10);
     }
@@ -49,7 +49,7 @@ SOLUTION = """  //
     write32 (hc, 0x48, 0);
     write32 (hc, 0x4C, 0);
     write32 (hc, 0x40, 0x16);                    // DME_LINKSTARTUP
-    for (unsigned spin = 0; spin < 20000; spin++) {
+    for (unsigned spin = 0; spin < 200000; spin++) {
       if (read32 (hc, 0x20) & 4) break;
       IODelay (10);
     }
