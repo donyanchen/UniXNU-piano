@@ -1,31 +1,20 @@
 diff --git a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
-index c33f959..80d73fd 100644
+index c33f959..3329f6f 100644
 --- a/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
 +++ b/uefi/uefi/pianoPkg/Library/DeviceBootManagerLib/DeviceBootManager.c
-@@ -139,6 +139,92 @@ DeviceBootManagerBeforeConsole (
+@@ -139,6 +139,67 @@ DeviceBootManagerBeforeConsole (
    return NULL;
  }
  
 +//
-+// Put the UFS stream in S2 bypass, for the OS that starts next.
++// Probe the SMMU before the OS starts, and put the UFS stream in bypass if the
++// block answers at all.
 +//
-+// HALIOMMU leaves every stream it configured on a translation context bank that
-+// it then disables (SCTLR = 0), so after ExitBootServices nothing the UFS
-+// controller issues is answered: the doorbell reads set, IS stays clear and no
-+// descriptor is ever fetched. The kernel cannot repair that - one S2CR store
-+// from there resets this part - while firmware can, and firmware is where
-+// HALIOMMU writes the same registers.
-+//
-+// The store follows arm_smmu_write_sme(): the stream-match entry is invalidated
-+// first, the S2CR is written while nothing matches it, the entry is made valid
-+// again, and the context bank's TLB is flushed. Writing S2CR while the entry is
-+// valid asks the SMMU to change the routing of a stream that may have
-+// transactions in flight, which the architecture does not define.
-+//
-+// Stream 0x60 is the UFS host (ufshc@1d84000 iommus = <&apps_smmu 0x60 0>).
-+//
-+// This runs after the payload has been read from the partition: until then
-+// UEFI's own UFS driver uses the translated IOVAs through that bank.
++// A single S2CR store resets the board from the kernel, and the firmware
++// attempt crashed with a synchronous exception before its first Print, so the
++// open question is whether the whole block is unreachable by then. Every step
++// prints before it touches the next register, so the next screen says how far
++// it got.
 +//
 +STATIC
 +VOID
@@ -34,68 +23,54 @@ index c33f959..80d73fd 100644
 +  )
 +{
 +  volatile UINT32  *Smmu;
++  UINT32            Scr0;
 +  UINT32            Id0;
-+  UINT32            Id1;
-+  UINT32            NumSmrg;
-+  UINT32            PageShift;
-+  UINT32            NumPage;
 +  UINT32            Index;
++  UINT32            NumSmrg;
 +
-+  Smmu      = (volatile UINT32 *)(UINTN)0x15000000;
-+  Id0       = Smmu[0x20 / 4];               // GR0_ID0
-+  Id1       = Smmu[0x24 / 4];               // GR0_ID1
-+  NumSmrg   = Id0 & 0xFF;                   // NUMSMRG
-+  PageShift = ((Id1 & 0x80000000U) != 0) ? 16 : 12;
-+  NumPage   = 1U << (((Id1 >> 28) & 0x7) + 1);
++  Print (L"piano: smmu probe start\r\n");
++  Smmu = (volatile UINT32 *)(UINTN)0x15000000;
++
++  Scr0 = Smmu[0x00 / 4];
++  Print (L"piano: smmu scr0=%08x\r\n", Scr0);
++
++  Id0 = Smmu[0x20 / 4];
++  Print (L"piano: smmu id0=%08x\r\n", Id0);
++
++  NumSmrg = Id0 & 0xFF;
++  if ((NumSmrg == 0) || (NumSmrg > 128)) {
++    Print (L"piano: smmu id0 unusable, giving up\r\n");
++    return;
++  }
 +
 +  for (Index = 0; Index < NumSmrg; Index++) {
-+    UINT32 Smr  = Smmu[(0x800 + 4 * Index) / 4];
-+    UINT32 S2cr = Smmu[(0xC00 + 4 * Index) / 4];
-+    UINT32 Bank;
-+    UINT32 Spin;
++    UINT32 Smr = Smmu[(0x800 + 4 * Index) / 4];
 +
 +    if (((Smr & 0x80000000U) == 0) || ((Smr & 0xFFFF) != 0x60)) {
 +      continue;
 +    }
 +
-+    Bank = S2cr & 0xFF;
++    Print (L"piano: smmu stream %u smr=%08x s2cr=%08x\r\n",
++           Index, Smr, Smmu[(0xC00 + 4 * Index) / 4]);
 +
-+    // 1. invalidate the entry so nothing matches the stream while S2CR changes
 +    Smmu[(0x800 + 4 * Index) / 4] = Smr & ~0x80000000U;
 +    __asm__ volatile ("dsb sy" ::: "memory");
-+
-+    // 2. bypass: the controller's own physical addresses are what the SMMU uses
 +    Smmu[(0xC00 + 4 * Index) / 4] = 2U << 16;
 +    __asm__ volatile ("dsb sy" ::: "memory");
-+
-+    // 3. re-enable the entry
 +    Smmu[(0x800 + 4 * Index) / 4] = Smr | 0x80000000U;
 +    __asm__ volatile ("dsb sy" ::: "memory");
 +
-+    // 4. drop whatever the context bank cached for this stream
-+    {
-+      volatile UINT32 *Cb = Smmu + ((NumPage + Bank) << PageShift);
-+      Cb[0x618 / 4] = 0;                    // TLBIALL
-+      Cb[0x7F0 / 4] = 0;                    // TLBSYNC
-+      for (Spin = 0; Spin < 100000; Spin++) {
-+        if ((Cb[0x7F4 / 4] & 1) == 0) {
-+          break;
-+        }
-+      }
-+    }
-+    __asm__ volatile ("dsb sy" ::: "memory");
-+
-+    Print (L"piano: UFS stream %u to bypass (smr=%08x s2cr was %08x bank %u)\r\n", Index, Smr, S2cr, Bank);
++    Print (L"piano: smmu s2cr now %08x\r\n", Smmu[(0xC00 + 4 * Index) / 4]);
 +    return;
 +  }
 +
-+  Print (L"piano: no valid SMMU entry for stream 0x60 (id0=%08x)\r\n", Id0);
++  Print (L"piano: smmu no stream 0x60 among %u entries\r\n", NumSmrg);
 +}
 +
  EFI_DEVICE_PATH_PROTOCOL**
  EFIAPI
  DeviceBootManagerAfterConsole ()
-@@ -173,6 +259,8 @@ DeviceBootManagerAfterConsole ()
+@@ -173,6 +234,8 @@ DeviceBootManagerAfterConsole ()
    // twenty-second window made every attempt a race with the enumeration.
    PianoFastbootWaitPayload (180000);
  
