@@ -224,6 +224,29 @@ LASTBLOCK_OLD = """  mVolumeMedia.LastBlock        = mVolumeBytes / RAM_BLOCK_SI
 
 LASTBLOCK_NEW = """  mVolumeMedia.LastBlock        = mVolumeBytes / mVolumeMedia.BlockSize - 1;"""
 
+WAIT_EARLY2_OLD = """  if (mVolumeReady) {
+    return TRUE;
+  }
+"""
+
+WAIT_EARLY2_NEW = """  if (mVolumeReady) {
+    return TRUE;
+  }
+
+  //
+  // The copy on storage needs no handshake and no window: take it first, so a
+  // boot with the payload already written never waits for a host at all.
+  //
+  if (!EFI_ERROR (PayloadFromDisk ()) && !EFI_ERROR (PublishVolume ())) {
+    Print (L"fastboot: payload volume published from storage\n");
+    return TRUE;
+  }
+"""
+
+TIMEOUT_OLD = """  PianoFastbootWaitPayload (180000);"""
+
+TIMEOUT_NEW = """  PianoFastbootWaitPayload (80000);"""
+
 WAIT_EARLY_OLD = """    Print (L"fastboot: no payload channel, continuing without one\\n");
     return FALSE;"""
 
@@ -288,6 +311,8 @@ def main() -> int:
         (BASE_OLD, BASE_NEW, "publish base"),
         (GEOM_OLD, GEOM_NEW, "publish geometry"),
         (LASTBLOCK_OLD, LASTBLOCK_NEW, "publish last block"),
+        (TIMEOUT_OLD, TIMEOUT_NEW, "payload window 80 s"),
+        (WAIT_EARLY2_OLD, WAIT_EARLY2_NEW, "storage first"),
         (WAIT_EARLY_OLD, WAIT_EARLY_NEW, "no-channel fallback"),
         (WAIT_OLD, WAIT_NEW, "wait fallback"),
     ):
