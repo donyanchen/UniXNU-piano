@@ -28,13 +28,13 @@ SOLUTION = """  //
   //
   {
     uint32_t hcsRaw = read32 (hc, 0x30);
-    if (hcsRaw & 8) {
+    if (((hcsRaw >> 8) & 0x7) != 0) {
       write32 (hc, 0x44, 0);
       write32 (hc, 0x48, 0);
       write32 (hc, 0x4C, 0);
       write32 (hc, 0x40, 0x14);                // DME_RESET
       for (unsigned spin = 0; spin < 20000; spin++) {
-        if (read32 (hc, 0x20) & 4) break;
+        if (read32 (hc, 0x20) & 0x400) break;
         IODelay (10);
       }
       write32 (hc, 0x20, 4);
@@ -43,11 +43,11 @@ SOLUTION = """  //
       write32 (hc, 0x4C, 0);
       write32 (hc, 0x40, 0x16);                // DME_LINKSTARTUP
       for (unsigned spin = 0; spin < 20000; spin++) {
-        if (read32 (hc, 0x20) & 4) break;
+        if (read32 (hc, 0x20) & 0x400) break;
         IODelay (10);
       }
       write32 (hc, 0x20, 4);
-      if (read32 (hc, 0x30) & 8) {
+      if (((read32 (hc, 0x30) >> 8) & 0x7) != 0) {
         // UIC commands are being refused too, so ask the device to come back
         // from hibernation and reset its endpoint before giving up.
         uint32_t isReset = read32 (hc, 0x20), argReset = read32 (hc, 0x48);
@@ -56,7 +56,7 @@ SOLUTION = """  //
         write32 (hc, 0x4C, 0);
         write32 (hc, 0x40, 0x18);              // DME_HIBER_EXIT
         for (unsigned spin = 0; spin < 20000; spin++) {
-          if (read32 (hc, 0x20) & 4) break;
+          if (read32 (hc, 0x20) & 0x400) break;
           IODelay (10);
         }
         uint32_t isHiber = read32 (hc, 0x20), argHiber = read32 (hc, 0x48);
@@ -66,7 +66,7 @@ SOLUTION = """  //
         write32 (hc, 0x4C, 1);                 // endpoint reset, all LUs
         write32 (hc, 0x40, 0x15);              // DME_ENDPOINTRESET
         for (unsigned spin = 0; spin < 20000; spin++) {
-          if (read32 (hc, 0x20) & 4) break;
+          if (read32 (hc, 0x20) & 0x400) break;
           IODelay (10);
         }
         uint32_t isEndp = read32 (hc, 0x20), argEndp = read32 (hc, 0x48);
@@ -76,12 +76,12 @@ SOLUTION = """  //
         write32 (hc, 0x4C, 0);
         write32 (hc, 0x40, 0x16);              // DME_LINKSTARTUP
         for (unsigned spin = 0; spin < 20000; spin++) {
-          if (read32 (hc, 0x20) & 4) break;
+          if (read32 (hc, 0x20) & 0x400) break;
           IODelay (10);
         }
         uint32_t isLink = read32 (hc, 0x20), argLink = read32 (hc, 0x48);
         write32 (hc, 0x20, 4);
-        if (read32 (hc, 0x30) & 8) {
+        if (((read32 (hc, 0x30) >> 8) & 0x7) != 0) {
           panic ("NATIVE_UFS adopt: UIC refused\\n"
                  "hcs=%08x->%08x is=%08x arg=%08x\\n"
                  "hiber is=%08x arg=%08x / endp is=%08x arg=%08x / link is=%08x arg=%08x",
