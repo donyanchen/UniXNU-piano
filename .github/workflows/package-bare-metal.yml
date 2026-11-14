@@ -202,7 +202,7 @@ jobs:
           # clear, so nothing the controller fetches can be translated. Put the
           # stream in real bypass instead: the buffers are physical and reach
           # above 4 GiB, which a stage-2 table this driver does not own cannot map.
-          python3 ../device/scripts/prepare-shengufs-smmu-bypass.py out
+          python3 ../device/scripts/prepare-shengufs-smmu-one-write.py out
           python3 ../device/scripts/prepare-shengufs-root-debug.py out
           for h in $(find out -path '*ShengUfs*' -name SmmuTakeover.h); do
             grep -n 'kUfsSmmuMapBytes = 0x100000' "$h" | head -2
